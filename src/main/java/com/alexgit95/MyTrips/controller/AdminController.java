@@ -1,0 +1,128 @@
+package com.alexgit95.MyTrips.controller;
+
+import com.alexgit95.MyTrips.model.CategoryEntity;
+import com.alexgit95.MyTrips.service.CategoryService;
+import com.alexgit95.MyTrips.service.DataImportExportService;
+import jakarta.servlet.http.HttpServletResponse;
+import jakarta.validation.Valid;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.validation.BindingResult;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.support.RedirectAttributes;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
+@Controller
+@RequestMapping("/admin")
+@RequiredArgsConstructor
+public class AdminController {
+
+    private final DataImportExportService dataService;
+    private final CategoryService         categoryService;
+
+    @GetMapping
+    public String index(Model model) {
+        return "admin/index";
+    }
+
+    // ===== CATÉGORIES CRUD =====
+
+    @GetMapping("/categories")
+    public String listCategories(Model model) {
+        model.addAttribute("categories", categoryService.findAll());
+        return "admin/categories";
+    }
+
+    @GetMapping("/categories/new")
+    public String newCategoryForm(Model model) {
+        model.addAttribute("category", new CategoryEntity());
+        model.addAttribute("pageTitle", "Nouvelle catégorie");
+        return "admin/category-form";
+    }
+
+    @PostMapping("/categories")
+    public String createCategory(@Valid @ModelAttribute("category") CategoryEntity category,
+                                  BindingResult result,
+                                  RedirectAttributes ra,
+                                  Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("pageTitle", "Nouvelle catégorie");
+            return "admin/category-form";
+        }
+        categoryService.save(category);
+        ra.addFlashAttribute("success", "Catégorie créée !");
+        return "redirect:/admin/categories";
+    }
+
+    @GetMapping("/categories/{id}/edit")
+    public String editCategoryForm(@PathVariable Long id, Model model) {
+        CategoryEntity category = categoryService.findById(id);
+        model.addAttribute("category", category);
+        model.addAttribute("pageTitle", "Modifier la catégorie");
+        return "admin/category-form";
+    }
+
+    @PostMapping("/categories/{id}")
+    public String updateCategory(@PathVariable Long id,
+                                  @Valid @ModelAttribute("category") CategoryEntity category,
+                                  BindingResult result,
+                                  RedirectAttributes ra,
+                                  Model model) {
+        if (result.hasErrors()) {
+            model.addAttribute("pageTitle", "Modifier la catégorie");
+            return "admin/category-form";
+        }
+        category.setId(id);
+        categoryService.save(category);
+        ra.addFlashAttribute("success", "Catégorie mise à jour !");
+        return "redirect:/admin/categories";
+    }
+
+    @PostMapping("/categories/{id}/delete")
+    public String deleteCategory(@PathVariable Long id, RedirectAttributes ra) {
+        try {
+            categoryService.delete(id);
+            ra.addFlashAttribute("success", "Catégorie supprimée.");
+        } catch (IllegalArgumentException e) {
+            ra.addFlashAttribute("error", e.getMessage());
+        }
+        return "redirect:/admin/categories";
+    }
+
+    // ---------------------------
+    // Export JSON
+    // ---------------------------
+    @GetMapping("/export")
+    public void export(HttpServletResponse response) throws IOException {
+        String filename = "mytrips-export-"
+                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+                + ".json";
+        response.setContentType("application/json");
+        response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+        dataService.exportToJson(response.getOutputStream());
+    }
+
+    // ---------------------------
+    // Import JSON
+    // ---------------------------
+    @PostMapping("/import")
+    public String importData(@RequestParam("file") MultipartFile file,
+                             RedirectAttributes ra) {
+        if (file.isEmpty()) {
+            ra.addFlashAttribute("error", "Veuillez sélectionner un fichier.");
+            return "redirect:/admin";
+        }
+        try {
+            dataService.importFromJson(file.getInputStream());
+            ra.addFlashAttribute("success", "Import réussi ! Toutes les données ont été remplacées.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Erreur lors de l'import : " + e.getMessage());
+        }
+        return "redirect:/admin";
+    }
+}

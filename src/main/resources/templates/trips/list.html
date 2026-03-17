@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:replace="~{fragments/layout :: layout(pageTitle='Mes Voyages',
+                                               content=~{::content},
+                                               extraHead=~{::extraHead},
+                                               extraScripts=~{::extraScripts})}">
+<head></head>
+<body>
+<th:block th:fragment="content">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="bi bi-map me-2 text-primary"></i>Mes Voyages</h1>
+        <a th:href="@{/trips/new}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Nouveau voyage
+        </a>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${#lists.isEmpty(trips)}" class="text-center py-5 text-muted">
+        <i class="bi bi-airplane display-1 mb-3 d-block"></i>
+        <h4>Aucun voyage pour l'instant</h4>
+        <p>Créez votre premier voyage pour commencer à suivre vos dépenses.</p>
+        <a th:href="@{/trips/new}" class="btn btn-primary mt-2">
+            <i class="bi bi-plus-lg me-1"></i>Créer un voyage
+        </a>
+    </div>
+
+    <!-- Trip cards -->
+    <div id="worldMap" style="height:320px; border-radius:12px; border:1px solid #dee2e6; margin-bottom:2rem;"
+         th:attr="data-markers=${markersJson}"></div>
+
+    <!-- Trip cards -->
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+        <div class="col" th:each="trip : ${trips}">
+            <div class="card h-100 shadow-sm trip-card">
+            <!-- Image -->
+                <div class="trip-card-img-wrapper">
+                    <img th:if="${trip.imageUrl != null and !#strings.isEmpty(trip.imageUrl)}"
+                         th:src="${trip.imageUrl}"
+                         class="card-img-top trip-card-img"
+                         alt="Image du voyage"
+                         onerror="this.src='https://images.unsplash.com/photo-1488085061387-422e29b40080?w=400&q=80'"/>
+                    <div th:unless="${trip.imageUrl != null and !#strings.isEmpty(trip.imageUrl)}"
+                         class="trip-card-img-placeholder d-flex align-items-center justify-content-center bg-light">
+                        <i class="bi bi-image text-muted display-4"></i>
+                    </div>
+                </div>
+
+                <div class="card-body">
+                    <h5 class="card-title fw-bold" th:text="${trip.name}">Nom du voyage</h5>
+                    <p class="card-text text-muted small mb-2">
+                        <i class="bi bi-calendar3 me-1"></i>
+                        <span th:text="${#temporals.format(trip.startDate, 'dd MMM yyyy')}"></span>
+                        &rarr;
+                        <span th:text="${#temporals.format(trip.endDate, 'dd MMM yyyy')}"></span>
+                    </p>
+
+                    <!-- Budget progress -->
+                    <div th:with="spent=${spentMap[trip.id]}">
+                        <div class="d-flex justify-content-between small mb-1">
+                            <span class="text-muted">Dépensé</span>
+                            <span th:text="${#numbers.formatDecimal(spent, 1, 2)} + ' € / ' + ${#numbers.formatDecimal(trip.budget, 1, 2)} + ' €'"
+                                  class="fw-semibold"></span>
+                        </div>
+                        <div class="progress mb-2" style="height:8px">
+                            <div class="progress-bar"
+                                 th:with="pct=${trip.budget.doubleValue() > 0 ? spent.doubleValue() / trip.budget.doubleValue() * 100 : 0}"
+                                 th:classappend="${pct >= 100 ? 'bg-danger' : (pct >= 80 ? 'bg-warning' : 'bg-success')}"
+                                 th:style="'width:' + ${pct > 100 ? 100 : pct} + '%'">
+                            </div>
+                        </div>
+                        <div th:with="remaining=${trip.budget.subtract(spent)}">
+                            <p class="small mb-0"
+                               th:classappend="${remaining.signum() < 0 ? 'text-danger' : 'text-success'}">
+                                <i class="bi bi-wallet2 me-1"></i>
+                                Restant :
+                                <strong th:text="${#numbers.formatDecimal(remaining, 1, 2)} + ' €'"></strong>
+                            </p>
+                            <p class="small mb-0 mt-1">
+                                <i class="bi bi-calendar3 me-1"></i>
+                                <span class="text-muted">Moyenne restante : </span>
+                                <strong th:classappend="${belowMap[trip.id]} ? 'text-danger' : 'text-success'"
+                                        th:text="${#numbers.formatDecimal(perDayMap[trip.id],1,2)} + ' € / jour'">0 € / jour</strong>
+                                <small class="text-muted ms-2">(<span th:text="${remainingDaysMap[trip.id]}">0</span> j)</small>
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card-footer bg-transparent border-top-0 d-flex gap-2">
+                    <a th:href="@{/trips/{id}(id=${trip.id})}" class="btn btn-sm btn-primary flex-fill">
+                        <i class="bi bi-eye me-1"></i>Détails
+                    </a>
+                    <a th:href="@{/trips/{id}/edit(id=${trip.id})}" class="btn btn-sm btn-outline-secondary">
+                        <i class="bi bi-pencil"></i>
+                    </a>
+                    <form th:action="@{/trips/{id}/delete(id=${trip.id})}" method="post"
+                          onsubmit="return confirm('Supprimer ce voyage et toutes ses dépenses ?')">
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="bi bi-trash"></i>
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+<th:block th:fragment="extraHead">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+</th:block>
+
+<th:block th:fragment="extraScripts">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function() {
+    const mapEl = document.getElementById('worldMap');
+    if (!mapEl) return;
+    const markers = JSON.parse(mapEl.dataset.markers || '[]');
+
+    const worldMap = L.map('worldMap', { scrollWheelZoom: false }).setView([20, 10], 2);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(worldMap);
+
+    markers.forEach(function(t) {
+        const popup = `<div style="min-width:140px;">
+            ${t.imageUrl ? `<img src="${t.imageUrl}" style="width:100%;height:80px;object-fit:cover;border-radius:4px;margin-bottom:6px;" onerror="this.style.display='none'"/>` : ''}
+            <strong>${t.name}</strong><br/>
+            <a href="/trips/${t.id}" class="btn btn-sm btn-primary mt-1" style="font-size:0.75rem;">Voir le détail</a>
+        </div>`;
+        L.marker([t.lat, t.lng]).addTo(worldMap).bindPopup(popup);
+    });
+
+    if (markers.length === 1) {
+        worldMap.setView([markers[0].lat, markers[0].lng], 6);
+    } else if (markers.length > 1) {
+        const group = L.featureGroup(markers.map(t => L.marker([t.lat, t.lng])));
+        worldMap.fitBounds(group.getBounds().pad(0.2));
+    }
+})();
+</script>
+</th:block>
+</body>
+</html>

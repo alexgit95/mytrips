@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:replace="~{fragments/layout :: layout(pageTitle=${pageTitle},
+                                               content=~{::content},
+                                               extraHead=~{},
+                                               extraScripts=~{})}">
+<head></head>
+<body>
+<th:block th:fragment="content">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/trips}">Voyages</a></li>
+            <li class="breadcrumb-item">
+                <a th:href="@{/trips/{id}(id=${trip.id})}" th:text="${trip.name}">Voyage</a>
+            </li>
+            <li class="breadcrumb-item active" th:text="${pageTitle}">Dépense</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-7">
+            <div class="card shadow-sm">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-receipt me-2"></i>
+                        <span th:text="${pageTitle}">Dépense</span>
+                        <small class="ms-2 opacity-75" th:text="'– ' + ${trip.name}"></small>
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    <form th:action="${expense.id != null
+                                     ? '/trips/' + trip.id + '/expenses/' + expense.id
+                                     : '/trips/' + trip.id + '/expenses'}"
+                          th:object="${expense}"
+                          method="post"
+                          class="needs-validation"
+                          novalidate>
+
+                        <!-- Libellé -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="label">
+                                <i class="bi bi-card-text me-1"></i>Libellé <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" id="label" th:field="*{label}"
+                                   class="form-control" th:classappend="${#fields.hasErrors('label')} ? 'is-invalid'"
+                                   placeholder="Ex : Restaurant trattoria"/>
+                            <div class="invalid-feedback" th:errors="*{label}"></div>
+                        </div>
+
+                        <!-- Montant + Date + Nombre de jours -->
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="amount">
+                                    <i class="bi bi-currency-euro me-1"></i>Montant <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <input type="number" id="amount" th:field="*{amount}"
+                                           class="form-control" th:classappend="${#fields.hasErrors('amount')} ? 'is-invalid'"
+                                           step="0.01" min="0.01" placeholder="0.00"/>
+                                    <span class="input-group-text">€</span>
+                                    <div class="invalid-feedback" th:errors="*{amount}"></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="date">
+                                    <i class="bi bi-calendar3 me-1"></i>Date <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" id="date" th:field="*{date}"
+                                       class="form-control" th:classappend="${#fields.hasErrors('date')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:errors="*{date}"></div>
+                            </div>
+                            <div class="col-md-4">
+                                <label class="form-label fw-semibold" for="numberOfDays">
+                                    <i class="bi bi-calendar-check me-1"></i>Durée (jours)
+                                </label>
+                                <input type="number" id="numberOfDays" th:field="*{numberOfDays}"
+                                       class="form-control" th:classappend="${#fields.hasErrors('numberOfDays')} ? 'is-invalid'"
+                                       min="1" value="1"
+                                       placeholder="Ex: 3 pour un hôtel 3 nuits"/>
+                                <small class="text-muted d-block mt-1">Optionnel : répartissez une dépense sur plusieurs jours</small>
+                                <div class="invalid-feedback" th:errors="*{numberOfDays}"></div>
+                            </div>
+                        </div>
+
+                        <!-- Catégorie -->
+                        <div class="mb-4">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-grid me-1"></i>Catégorie <span class="text-danger">*</span>
+                            </label>
+                            <div class="d-flex flex-wrap gap-2">
+                                <div th:each="cat : ${categories}">
+                                    <input type="radio"
+                                           class="btn-check"
+                                           th:id="${'cat-' + cat.id}"
+                                           th:value="${cat.id}"
+                                           th:field="*{category}"
+                                           autocomplete="off"/>
+                                    <label class="btn btn-outline-secondary"
+                                           th:for="${'cat-' + cat.id}"
+                                           th:style="${(cat.color != null and !#strings.isEmpty(cat.color))
+                                               ? 'border-color: ' + cat.color + '; background-color: ' + cat.color + '; color: white;'
+                                               : 'border-color: #adb5bd; background-color: #e9ecef; color: #212529;'}"
+                                           th:text="${cat.icon + ' ' + cat.name}">Catégorie</label>
+                                </div>
+                            </div>
+                            <div th:if="${#fields.hasErrors('category')}"
+                                 class="text-danger small mt-1" th:errors="*{category}"></div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a th:href="@{/trips/{id}(id=${trip.id})}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-success">
+                                <i class="bi bi-floppy me-1"></i>Enregistrer
+                            </button>
+                        </div>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+</th:block>
+</body>
+</html>

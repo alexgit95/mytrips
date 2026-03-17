@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:replace="~{fragments/layout :: layout(pageTitle='Frise chronologique',
+                                               content=~{::content},
+                                               extraHead=~{},
+                                               extraScripts=~{})}">
+<head></head>
+<body>
+<th:block th:fragment="content">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="bi bi-clock-history me-2 text-primary"></i>Frise chronologique</h1>
+        <a th:href="@{/trips/new}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Nouveau voyage
+        </a>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${tripsByYear.isEmpty()}" class="text-center py-5 text-muted">
+        <i class="bi bi-calendar2-x display-1 mb-3 d-block"></i>
+        <h4>Aucun voyage enregistré</h4>
+        <a th:href="@{/trips/new}" class="btn btn-primary mt-2">
+            <i class="bi bi-plus-lg me-1"></i>Créer un voyage
+        </a>
+    </div>
+
+    <!-- Timeline -->
+    <div th:unless="${tripsByYear.isEmpty()}" class="timeline-wrapper">
+
+        <th:block th:each="yearEntry : ${tripsByYear}">
+
+            <!-- Year separator -->
+            <div class="timeline-year">
+                <span th:text="${yearEntry.key}">2024</span>
+            </div>
+
+            <!-- Trip entries for this year -->
+            <th:block th:each="trip, iterStat : ${yearEntry.value}">
+                <div th:with="spent=${spentMap[trip.id]},
+                              remaining=${trip.budget.subtract(spentMap[trip.id])},
+                              pct=${trip.budget.doubleValue() > 0 ? spentMap[trip.id].doubleValue() / trip.budget.doubleValue() * 100 : 0},
+                              side=${iterStat.index % 2 == 0 ? 'left' : 'right'}"
+                     th:classappend="${side}"
+                     class="timeline-entry">
+
+                <div class="timeline-dot"></div>
+
+                <div class="timeline-card card shadow-sm">
+                    <!-- Image banner -->
+                    <div th:if="${trip.imageUrl != null and !#strings.isEmpty(trip.imageUrl)}"
+                         class="timeline-card-img"
+                         th:style="'background-image: url(' + ${trip.imageUrl} + ')'">
+                    </div>
+                    <div class="card-body py-3 px-3">
+                        <div class="d-flex justify-content-between align-items-start gap-2 mb-1">
+                            <h6 class="mb-0 fw-bold" th:text="${trip.name}">Nom</h6>
+                            <span class="badge bg-primary text-nowrap"
+                                  th:text="${#temporals.format(trip.startDate,'dd MMM')} + ' → ' + ${#temporals.format(trip.endDate,'dd MMM yyyy')}">
+                            </span>
+                        </div>
+                        <!-- Budget bar -->
+                        <div class="progress my-2" style="height:6px">
+                            <div class="progress-bar"
+                                 th:classappend="${pct >= 100 ? 'bg-danger' : (pct >= 80 ? 'bg-warning' : 'bg-success')}"
+                                 th:style="'width:' + ${pct > 100 ? 100 : pct} + '%'">
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between small">
+                            <span class="text-danger fw-semibold"
+                                  th:text="${#numbers.formatDecimal(spent,1,2)} + ' € dépensés'">0 €</span>
+                            <span th:classappend="${remaining.signum() < 0 ? 'text-danger' : 'text-success'}"
+                                  class="fw-semibold"
+                                  th:text="${#numbers.formatDecimal(remaining,1,2)} + ' € restants'">0 €</span>
+                        </div>
+                        <a th:href="@{/trips/{id}(id=${trip.id})}" class="btn btn-sm btn-outline-primary mt-2 w-100">
+                            <i class="bi bi-eye me-1"></i>Détails
+                        </a>
+                    </div>
+                </div>
+            </div>
+            </th:block>
+
+        </th:block>
+
+        <!-- End marker -->
+        <div class="timeline-end"><i class="bi bi-flag-fill text-primary"></i></div>
+    </div>
+
+</th:block>
+</body>
+</html>

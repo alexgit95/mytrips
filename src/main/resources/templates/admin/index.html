@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:replace="~{fragments/layout :: layout(pageTitle='Administration',
+                                               content=~{::content},
+                                               extraHead=~{},
+                                               extraScripts=~{})}">
+<head></head>
+<body>
+<th:block th:fragment="content">
+
+    <h1 class="h3 mb-4"><i class="bi bi-gear me-2 text-primary"></i>Administration</h1>
+
+    <div class="row g-4">
+
+        <!-- Export card -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-cloud-download me-2"></i>Exporter les données</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Téléchargez l'ensemble de vos voyages et dépenses au format JSON.
+                        Ce fichier peut être utilisé pour sauvegarder vos données ou les transférer vers une autre instance.
+                    </p>
+                    <a th:href="@{/admin/export}" class="btn btn-primary w-100">
+                        <i class="bi bi-download me-2"></i>Télécharger l'export JSON
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Import card -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-cloud-upload me-2"></i>Importer des données</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-warning py-2 mb-3">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <strong>Attention :</strong> l'import remplacera <strong>toutes</strong> les données existantes.
+                    </div>
+                    <form th:action="@{/admin/import}"
+                          method="post"
+                          enctype="multipart/form-data"
+                          onsubmit="return confirm('⚠️ Cette action remplacera TOUTES les données existantes. Continuer ?')">
+                        <div class="mb-3">
+                            <label for="file" class="form-label fw-semibold">Fichier JSON d'export</label>
+                            <input type="file" id="file" name="file"
+                                   class="form-control" accept=".json" required/>
+                        </div>
+                        <button type="submit" class="btn btn-warning w-100">
+                            <i class="bi bi-upload me-2"></i>Importer et remplacer
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Categories card -->
+        <div class="col-md-4">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-info text-white">
+                    <h5 class="mb-0"><i class="bi bi-tag me-2"></i>Gérer les catégories</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Créez, modifiez ou supprimez les catégories de dépenses utilisées dans l'application.
+                    </p>
+                    <a th:href="@{/admin/categories}" class="btn btn-info w-100">
+                        <i class="bi bi-pencil me-2"></i>Gérer les catégories
+                    </a>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</th:block>
+</body>
+</html>

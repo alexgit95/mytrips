@@ -1,0 +1,237 @@
+/* =============================================
+   MyTrips – Custom Styles
+   ============================================= */
+
+/* General */
+body {
+    background-color: #f8f9fa;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+main {
+    flex: 1;
+}
+
+/* Navbar */
+.navbar-brand {
+    font-size: 1.3rem;
+    letter-spacing: 0.5px;
+}
+
+/* Trip card */
+.trip-card {
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: none;
+    border-radius: 12px;
+}
+
+.trip-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.12) !important;
+}
+
+.trip-card-img-wrapper {
+    height: 180px;
+    overflow: hidden;
+    border-radius: 12px 12px 0 0;
+}
+
+.trip-card-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.3s ease;
+}
+
+.trip-card:hover .trip-card-img {
+    transform: scale(1.05);
+}
+
+.trip-card-img-placeholder {
+    width: 100%;
+    height: 100%;
+}
+
+/* Trip detail image */
+.trip-detail-img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    max-height: 260px;
+}
+
+/* Stat boxes - detail page */
+.stat-box {
+    transition: box-shadow 0.2s;
+}
+
+.stat-box:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+/* Category badge colors + emoji icons via ::before */
+.badge[class^="badge-cat-"] {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+}
+.badge[class^="badge-cat-"]::before {
+    /* emoji icon placeholder; specific icons set per-category below */
+    content: "";
+    display: inline-block;
+}
+
+/* Note: Category colors are now dynamic from database (CategoryEntity.color)
+   The ::before pseudo-element approach is kept for future inline emoji display if needed */
+
+/* Category radio buttons */
+.btn-check:checked + .btn-outline-secondary {
+    font-weight: 600;
+}
+
+/* Cards */
+.card {
+    border: none;
+    border-radius: 12px;
+}
+
+.card-header {
+    border-radius: 12px 12px 0 0 !important;
+    font-weight: 600;
+}
+
+/* Breadcrumb */
+.breadcrumb {
+    font-size: 0.9rem;
+}
+
+/* Progress bar */
+.progress {
+    border-radius: 8px;
+}
+
+/* Table */
+.table thead th {
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #6c757d;
+    font-weight: 600;
+}
+
+/* Footer */
+footer {
+    font-size: 0.8rem;
+}
+
+/* =============================================
+   Timeline (Frise chronologique)
+   ============================================= */
+.timeline-wrapper {
+    position: relative;
+    padding: 0 0 2rem 0;
+}
+
+/* Central vertical line */
+.timeline-wrapper::before {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: linear-gradient(to bottom, #0d6efd 0%, #dee2e6 100%);
+    transform: translateX(-50%);
+    border-radius: 3px;
+}
+
+/* Year badge */
+.timeline-year {
+    position: relative;
+    text-align: center;
+    margin: 2rem 0 1rem;
+    z-index: 1;
+}
+.timeline-year span {
+    background: #0d6efd;
+    color: white;
+    padding: 0.3rem 1.2rem;
+    border-radius: 20px;
+    font-weight: 700;
+    font-size: 1rem;
+    display: inline-block;
+    box-shadow: 0 2px 8px rgba(13,110,253,0.35);
+}
+
+/* Entry */
+.timeline-entry {
+    position: relative;
+    width: 45%;
+    margin-bottom: 2rem;
+    z-index: 1;
+}
+
+.timeline-entry.left {
+    left: 0;
+    margin-right: auto;
+}
+
+.timeline-entry.right {
+    left: 55%;
+    margin-left: auto;
+}
+
+/* Dot on the central line */
+.timeline-dot {
+    position: absolute;
+    top: 1.2rem;
+    width: 14px;
+    height: 14px;
+    background: #0d6efd;
+    border: 3px solid #fff;
+    border-radius: 50%;
+    box-shadow: 0 0 0 2px #0d6efd;
+}
+
+.timeline-entry.left  .timeline-dot { right: -8.2%; }
+.timeline-entry.right .timeline-dot { left:  -8.2%; }
+
+/* Card */
+.timeline-card {
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.timeline-card-img {
+    height: 110px;
+    background-size: cover;
+    background-position: center;
+}
+
+/* End flag */
+.timeline-end {
+    text-align: center;
+    position: relative;
+    z-index: 1;
+    font-size: 1.5rem;
+    margin-top: 1rem;
+}
+
+/* Mobile: single column */
+@media (max-width: 768px) {
+    .timeline-wrapper::before { left: 18px; }
+    .timeline-entry { width: 85%; left: 40px !important; margin-left: 0; margin-right: 0; }
+    .timeline-entry.left  .timeline-dot,
+    .timeline-entry.right .timeline-dot { left: -28px; right: auto; }
+    .timeline-end { text-align: left; padding-left: 40px; }
+    .timeline-year { text-align: left; padding-left: 40px; }
+}
+
+/* Responsive adjustments */
+@media (max-width: 576px) {
+    .trip-card-img-wrapper {
+        height: 150px;
+    }
+}

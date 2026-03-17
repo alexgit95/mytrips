@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:replace="~{fragments/layout :: layout(pageTitle=${trip.name},
+                                               content=~{::content},
+                                               extraHead=~{},
+                                               extraScripts=~{::extraScripts})}">
+<head></head>
+<body>
+
+<th:block th:fragment="content">
+
+    <!-- Hidden chart data (JSON from server for Chart.js) -->
+    <div id="chart-data"
+         th:attr="data-labels=${chartLabelsJson},
+                  data-actual=${chartActualJson},
+                  data-budget=${chartBudgetJson},
+                  data-trend=${chartTrendJson},
+                  data-cat-labels=${catLabelsJson},
+                  data-cat-amounts=${catAmountsJson}"
+         style="display:none"></div>
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/trips}">Voyages</a></li>
+            <li class="breadcrumb-item active" th:text="${trip.name}">Voyage</li>
+        </ol>
+    </nav>
+
+    <!-- Trip header card -->
+    <div class="card shadow-sm mb-4 overflow-hidden">
+        <div class="row g-0">
+            <!-- Image -->
+            <div th:if="${trip.imageUrl != null and !#strings.isEmpty(trip.imageUrl)}"
+                 class="col-md-3">
+                <img th:src="${trip.imageUrl}" class="img-fluid h-100 trip-detail-img"
+                     alt="Image du voyage"
+                     onerror="this.parentElement.style.display='none'"/>
+            </div>
+            <div th:classappend="${trip.imageUrl != null and !#strings.isEmpty(trip.imageUrl)} ? 'col-md-9' : 'col-12'"
+                 class="p-4">
+                <div class="d-flex justify-content-between align-items-start flex-wrap gap-2">
+                    <div>
+                        <h2 class="mb-1 fw-bold" th:text="${trip.name}">Nom du voyage</h2>
+                        <p class="text-muted mb-3">
+                            <i class="bi bi-calendar3 me-1"></i>
+                            <span th:text="${#temporals.format(trip.startDate, 'dd MMMM yyyy')}"></span>
+                            &rarr;
+                            <span th:text="${#temporals.format(trip.endDate, 'dd MMMM yyyy')}"></span>
+                        </p>
+                    </div>
+                    <div class="d-flex gap-2">
+                        <a th:href="@{/trips/{id}/expenses/new(id=${trip.id})}" class="btn btn-success btn-sm">
+                            <i class="bi bi-plus-lg me-1"></i>Ajouter une dépense
+                        </a>
+                        <a th:href="@{/trips/{id}/edit(id=${trip.id})}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-pencil me-1"></i>Modifier
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Budget summary -->
+                <div class="row g-3">
+                    <div class="col-sm-4">
+                        <div class="stat-box bg-primary bg-opacity-10 rounded-3 p-3 text-center">
+                            <div class="text-primary small fw-semibold mb-1">Budget total</div>
+                            <div class="fs-4 fw-bold" th:text="${#numbers.formatDecimal(trip.budget, 1, 2)} + ' €'">0 €</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="stat-box bg-danger bg-opacity-10 rounded-3 p-3 text-center">
+                            <div class="text-danger small fw-semibold mb-1">Dépensé</div>
+                            <div class="fs-4 fw-bold text-danger" th:text="${#numbers.formatDecimal(total, 1, 2)} + ' €'">0 €</div>
+                        </div>
+                    </div>
+                    <div class="col-sm-4">
+                        <div class="stat-box rounded-3 p-3 text-center"
+                             th:classappend="${remaining.signum() < 0 ? 'bg-danger bg-opacity-10' : 'bg-success bg-opacity-10'}">
+                            <div class="small fw-semibold mb-1"
+                                 th:classappend="${remaining.signum() < 0 ? 'text-danger' : 'text-success'}">
+                                Budget restant
+                            </div>
+                            <div class="fs-4 fw-bold"
+                                 th:classappend="${remaining.signum() < 0 ? 'text-danger' : 'text-success'}"
+                                 th:text="${#numbers.formatDecimal(remaining, 1, 2)} + ' €'">0 €</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Progress bar -->
+                <div class="mt-3">
+                    <div th:with="pct=${trip.budget.doubleValue() > 0 ? total.doubleValue() / trip.budget.doubleValue() * 100 : 0}">
+                        <div class="progress" style="height:12px">
+                            <div class="progress-bar"
+                                 th:classappend="${pct >= 100 ? 'bg-danger' : (pct >= 80 ? 'bg-warning' : 'bg-success')}"
+                                 th:style="'width:' + ${pct > 100 ? 100 : pct} + '%'">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Budget moyen par jour restant -->
+                <div class="mt-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div class="small text-muted">Budget moyen restant / jour</div>
+                        <div th:classappend="${belowThreshold} ? 'text-danger fw-bold' : 'text-success fw-bold'"
+                             th:text="${#numbers.formatDecimal(perDayRemaining,1,2)} + ' € / jour'">0 € / jour</div>
+                    </div>
+                    <div class="small text-muted">Jours restants: <span th:text="${remainingDays}">0</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Charts row -->
+    <div th:if="${!#lists.isEmpty(expenses)}" class="row g-4 mb-4">
+
+        <!-- Pie chart -->
+        <div class="col-md-5">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-pie-chart me-2 text-primary"></i>Répartition par catégorie</h6>
+                </div>
+                <div class="card-body d-flex align-items-center justify-content-center">
+                    <canvas id="pieChart" style="max-height:300px"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Line chart -->
+        <div class="col-md-7">
+            <div class="card shadow-sm h-100">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-graph-up me-2 text-primary"></i>Évolution des dépenses</h6>
+                </div>
+                <div class="card-body">
+                    <canvas id="lineChart" style="max-height:300px"></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Expenses table -->
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h6 class="mb-0"><i class="bi bi-list-ul me-2 text-primary"></i>Dépenses</h6>
+            <span class="badge bg-secondary" th:text="${#lists.size(expenses)} + ' dépense(s)'"></span>
+        </div>
+        <div class="card-body p-0">
+
+            <!-- Empty -->
+            <div th:if="${#lists.isEmpty(expenses)}" class="text-center py-5 text-muted">
+                <i class="bi bi-receipt display-3 mb-3 d-block"></i>
+                <p>Aucune dépense enregistrée pour ce voyage.</p>
+                <a th:href="@{/trips/{id}/expenses/new(id=${trip.id})}" class="btn btn-success">
+                    <i class="bi bi-plus-lg me-1"></i>Ajouter une dépense
+                </a>
+            </div>
+
+            <!-- Table -->
+            <div th:unless="${#lists.isEmpty(expenses)}" class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Date</th>
+                        <th>Libellé</th>
+                        <th>Catégorie</th>
+                        <th class="text-end">Montant</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="expense : ${expenses}">
+                        <td class="text-nowrap" th:text="${#temporals.format(expense.date, 'dd/MM/yyyy')}">dd/mm/yyyy</td>
+                        <td th:text="${expense.label}">Libellé</td>
+                        <td>
+                            <span class="badge"
+                                  th:text="${expense.category.icon + ' ' + expense.category.name}"
+                                  th:style="${(expense.category.color != null and !#strings.isEmpty(expense.category.color))
+                                              ? 'background-color: ' + expense.category.color + '; color: white;'
+                                              : 'background-color: #e9ecef; color: #212529;'}">
+                            </span>
+                        </td>
+                        <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(expense.amount, 1, 2)} + ' €'">0 €</td>
+                        <td class="text-center text-nowrap">
+                            <a th:href="@{/trips/{tid}/expenses/{eid}/edit(tid=${trip.id}, eid=${expense.id})}"
+                               class="btn btn-sm btn-outline-secondary me-1">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form th:action="@{/trips/{tid}/expenses/{eid}/delete(tid=${trip.id}, eid=${expense.id})}"
+                                  method="post" class="d-inline"
+                                  onsubmit="return confirm('Supprimer cette dépense ?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                    <tfoot class="table-light">
+                    <tr>
+                        <td colspan="3" class="fw-bold text-end">Total</td>
+                        <td class="text-end fw-bold text-danger" th:text="${#numbers.formatDecimal(total, 1, 2)} + ' €'"></td>
+                        <td></td>
+                    </tr>
+                    </tfoot>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+<th:block th:fragment="extraScripts">
+<script th:inline="javascript">
+/*<![CDATA[*/
+(function () {
+    const chartDataEl = document.getElementById('chart-data');
+    if (!chartDataEl) return;
+
+    const labels       = JSON.parse(chartDataEl.dataset.labels  || '[]');
+    const actual       = JSON.parse(chartDataEl.dataset.actual  || '[]');
+    const budget       = JSON.parse(chartDataEl.dataset.budget  || '[]');
+    const trend        = JSON.parse(chartDataEl.dataset.trend   || '[]');
+    const catLabels    = JSON.parse(chartDataEl.dataset.catLabels  || '[]');
+    const catAmounts   = JSON.parse(chartDataEl.dataset.catAmounts || '[]');
+
+    // ---- CATEGORY COLORS ----
+    const palette = [
+        '#4e79a7','#f28e2b','#e15759','#76b7b2',
+        '#59a14f','#edc948','#b07aa1','#ff9da7'
+    ];
+
+    // ---- PIE CHART ----
+    const pieEl = document.getElementById('pieChart');
+    if (pieEl && catLabels.length > 0) {
+        new Chart(pieEl, {
+            type: 'doughnut',
+            data: {
+                labels: catLabels,
+                datasets: [{
+                    data: catAmounts,
+                    backgroundColor: palette.slice(0, catLabels.length),
+                    borderWidth: 2,
+                    borderColor: '#fff'
+                }]
+            },
+            options: {
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ' ' + ctx.label + ' : ' + ctx.parsed.toFixed(2) + ' €'
+                        }
+                    }
+                }
+            }
+        });
+    }
+
+    // ---- LINE CHART ----
+    const lineEl = document.getElementById('lineChart');
+    if (lineEl && labels.length > 0) {
+        new Chart(lineEl, {
+            type: 'line',
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'Dépenses cumulées',
+                        data: actual,
+                        borderColor: '#4e79a7',
+                        backgroundColor: 'rgba(78,121,167,0.1)',
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        spanGaps: false
+                    },
+                    {
+                        label: 'Budget',
+                        data: budget,
+                        borderColor: '#e15759',
+                        borderWidth: 2,
+                        borderDash: [6, 4],
+                        pointRadius: 0,
+                        fill: false
+                    },
+                    {
+                        label: 'Tendance projetée',
+                        data: trend,
+                        borderColor: '#f28e2b',
+                        borderWidth: 2,
+                        borderDash: [4, 3],
+                        pointRadius: 2,
+                        fill: false,
+                        tension: 0,
+                        spanGaps: false
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ' ' + ctx.dataset.label + ' : ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) + ' €' : '-')
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { callback: v => v + ' €' }
+                    }
+                }
+            }
+        });
+    }
+})();
+/*]]>*/
+</script>
+</th:block>
+</body>
+</html>

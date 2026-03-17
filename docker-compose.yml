@@ -1,0 +1,37 @@
+services:
+
+  # ── Application Spring Boot ──────────────────────────────────────
+  app:
+    build: .
+    container_name: mytrips-app
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      POSTGRES_USER: mytrips
+      POSTGRES_PASSWORD: mytrips_secret
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Base de données PostgreSQL ───────────────────────────────────
+  db:
+    image: postgres:16-alpine
+    container_name: mytrips-db
+    environment:
+      POSTGRES_DB: mytrips
+      POSTGRES_USER: mytrips
+      POSTGRES_PASSWORD: mytrips_secret
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mytrips -d mytrips"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+    name: mytrips_postgres_data

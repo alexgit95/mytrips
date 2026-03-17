@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:replace="~{fragments/layout :: layout(pageTitle=${pageTitle},
+                                               content=~{::content},
+                                               extraHead=~{::extraHead},
+                                               extraScripts=~{::extraScripts})}">
+<head></head>
+<body>
+<th:block th:fragment="content">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/trips}">Voyages</a></li>
+            <li class="breadcrumb-item active" th:text="${pageTitle}">Formulaire</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-airplane me-2"></i>
+                        <span th:text="${pageTitle}">Voyage</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    <form th:action="${trip.id != null ? '/trips/' + trip.id : '/trips'}"
+                          th:object="${trip}"
+                          method="post"
+                          class="needs-validation"
+                          novalidate>
+
+                        <!-- Nom -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="name">
+                                <i class="bi bi-tag me-1"></i>Nom du voyage <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="text" id="name" th:field="*{name}"
+                                       class="form-control" th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'"
+                                       placeholder="Ex : Vacances en Italie"/>
+                                <button type="button" id="generateNameBtn" class="btn btn-outline-secondary" title="Générer un nom"
+                                        onclick="generateTripName()">
+                                    <i class="bi bi-magic"></i>&nbsp;Générer
+                                </button>
+                            </div>
+                            <div class="invalid-feedback" th:errors="*{name}"></div>
+                        </div>
+
+                        <!-- Dates -->
+                        <div class="row mb-3">
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="startDate">
+                                    <i class="bi bi-calendar-event me-1"></i>Date de début <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" id="startDate" th:field="*{startDate}"
+                                       class="form-control" th:classappend="${#fields.hasErrors('startDate')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:errors="*{startDate}"></div>
+                            </div>
+                            <div class="col-md-6">
+                                <label class="form-label fw-semibold" for="endDate">
+                                    <i class="bi bi-calendar-check me-1"></i>Date de fin <span class="text-danger">*</span>
+                                </label>
+                                <input type="date" id="endDate" th:field="*{endDate}"
+                                       class="form-control" th:classappend="${#fields.hasErrors('endDate')} ? 'is-invalid'"/>
+                                <div class="invalid-feedback" th:errors="*{endDate}"></div>
+                            </div>
+                        </div>
+
+                        <!-- Budget -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="budget">
+                                <i class="bi bi-wallet2 me-1"></i>Budget (€) <span class="text-danger">*</span>
+                            </label>
+                            <div class="input-group">
+                                <input type="number" id="budget" th:field="*{budget}"
+                                       class="form-control" th:classappend="${#fields.hasErrors('budget')} ? 'is-invalid'"
+                                       step="0.01" min="0.01" placeholder="0.00"/>
+                                <span class="input-group-text">€</span>
+                                <div class="invalid-feedback" th:errors="*{budget}"></div>
+                            </div>
+                        </div>
+
+                        <!-- Seuil budget/jour restant -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="dailyBudgetThreshold">
+                                <i class="bi bi-sliders me-1"></i>Seuil alerte budget/jour restant (optionnel)
+                            </label>
+                            <div class="input-group">
+                                <input type="number" id="dailyBudgetThreshold" th:field="*{dailyBudgetThreshold}"
+                                       class="form-control" th:classappend="${#fields.hasErrors('dailyBudgetThreshold')} ? 'is-invalid'"
+                                       step="0.01" min="0" placeholder="Ex: 30.00"/>
+                                <span class="input-group-text">€ / jour</span>
+                                <div class="invalid-feedback" th:errors="*{dailyBudgetThreshold}"></div>
+                            </div>
+                            <small class="text-muted">Si le budget restant/jour passe en dessous de cette valeur, il s'affichera en rouge.</small>
+                        </div>
+
+                        <!-- Dépense journalière prévue -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="dailyExpenseBudget">
+                                <i class="bi bi-graph-up-arrow me-1"></i>Dépense journalière prévue (optionnel)
+                            </label>
+                            <div class="input-group">
+                                <input type="number" id="dailyExpenseBudget" th:field="*{dailyExpenseBudget}"
+                                       class="form-control" th:classappend="${#fields.hasErrors('dailyExpenseBudget')} ? 'is-invalid'"
+                                       step="0.01" min="0" placeholder="Ex: 50.00"/>
+                                <span class="input-group-text">€ / jour</span>
+                                <div class="invalid-feedback" th:errors="*{dailyExpenseBudget}"></div>
+                            </div>
+                            <small class="text-muted">Définit la ligne de projection dans le graphique d'évolution des dépenses.</small>
+                        </div>
+
+                        <!-- Coordonnées géographiques -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold">
+                                <i class="bi bi-geo-alt me-1"></i>Localisation (optionnel)
+                            </label>
+                            <div class="row g-2 mb-2">
+                                <div class="col">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-geo"></i></span>
+                                        <input type="number" id="latitude" th:field="*{latitude}"
+                                               class="form-control" step="any" placeholder="Latitude (ex: 48.8566)"/>
+                                    </div>
+                                </div>
+                                <div class="col">
+                                    <div class="input-group">
+                                        <span class="input-group-text"><i class="bi bi-geo"></i></span>
+                                        <input type="number" id="longitude" th:field="*{longitude}"
+                                               class="form-control" step="any" placeholder="Longitude (ex: 2.3522)"/>
+                                    </div>
+                                </div>
+                            </div>
+                            <small class="text-muted d-block mb-2">Cliquez sur la carte pour définir la position, ou saisissez les coordonnées manuellement.</small>
+                            <div id="locationPickerMap" style="height:280px; border-radius:8px; border:1px solid #dee2e6;"></div>
+                        </div>
+
+                        <!-- Image URL -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="imageUrl">
+                                <i class="bi bi-image me-1"></i>URL de l'image (optionnel)
+                            </label>
+                            <input type="url" id="imageUrl" th:field="*{imageUrl}"
+                                   class="form-control"
+                                   placeholder="https://exemple.com/image.jpg"/>
+                            <!-- Aperçu -->
+                            <div id="imagePreviewContainer" class="mt-2" style="display:none">
+                                <img id="imagePreview" src="" alt="Aperçu" class="img-thumbnail" style="max-height:180px"/>
+                            </div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a th:href="@{/trips}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-floppy me-1"></i>Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+<th:block th:fragment="extraHead">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+</th:block>
+
+<th:block th:fragment="extraScripts">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+    // ---- Image preview ----
+    const imgUrlInput = document.getElementById('imageUrl');
+    const preview     = document.getElementById('imagePreview');
+    const previewBox  = document.getElementById('imagePreviewContainer');
+    function updatePreview() {
+        const url = imgUrlInput.value.trim();
+        if (url) { preview.src = url; previewBox.style.display = 'block'; }
+        else { previewBox.style.display = 'none'; }
+    }
+    imgUrlInput.addEventListener('input', updatePreview);
+    updatePreview();
+
+    // ---- Leaflet location picker ----
+    const latInput = document.getElementById('latitude');
+    const lngInput = document.getElementById('longitude');
+
+    const initLat = parseFloat(latInput.value) || 20;
+    const initLng = parseFloat(lngInput.value) || 10;
+    const initZoom = (latInput.value && lngInput.value) ? 8 : 2;
+
+    const pickMap = L.map('locationPickerMap').setView([initLat, initLng], initZoom);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+    }).addTo(pickMap);
+
+    let marker = null;
+    if (latInput.value && lngInput.value) {
+        marker = L.marker([initLat, initLng]).addTo(pickMap);
+    }
+
+    pickMap.on('click', function(e) {
+        const { lat, lng } = e.latlng;
+        latInput.value = lat.toFixed(6);
+        lngInput.value = lng.toFixed(6);
+        if (marker) { marker.setLatLng(e.latlng); }
+        else { marker = L.marker(e.latlng).addTo(pickMap); }
+    });
+
+    function syncMapFromInputs() {
+        const lat = parseFloat(latInput.value);
+        const lng = parseFloat(lngInput.value);
+        if (!isNaN(lat) && !isNaN(lng)) {
+            pickMap.setView([lat, lng], 8);
+            if (marker) { marker.setLatLng([lat, lng]); }
+            else { marker = L.marker([lat, lng]).addTo(pickMap); }
+        }
+    }
+    latInput.addEventListener('change', syncMapFromInputs);
+    lngInput.addEventListener('change', syncMapFromInputs);
+
+    // ---- Generate trip name ----
+    const nameInput = document.getElementById('name');
+    const genBtn = document.getElementById('generateNameBtn');
+
+    async function reverseGeocode(lat, lng) {
+        const url = `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&accept-language=fr`;
+        const res = await fetch(url, { method: 'GET' });
+        if (!res.ok) throw new Error('Geocoding failed');
+        return await res.json();
+    }
+
+    async function generateTripName() {
+        if (!nameInput) return;
+        genBtn.disabled = true;
+        const lat = latInput.value && latInput.value.trim();
+        const lng = lngInput.value && lngInput.value.trim();
+        const startDate = document.getElementById('startDate')?.value;
+        const year = startDate ? new Date(startDate).getFullYear() : new Date().getFullYear();
+        try {
+            let place = null;
+            let country = null;
+            if (lat && lng) {
+                const json = await reverseGeocode(lat, lng);
+                const addr = json.address || {};
+                place = json.name || addr.city || addr.town || addr.village || addr.hamlet || addr.county || (json.display_name && json.display_name.split(',')[0]);
+                country = addr.country || null;
+            }
+            // Fallbacks
+            if (!place) {
+                // try to use image alt or a generic label
+                place = 'Voyage';
+            }
+            const parts = [place];
+            if (country) parts.push(country);
+            parts.push(year);
+            nameInput.value = parts.join(' - ');
+        } catch (e) {
+            console.error('generateTripName error', e);
+            nameInput.value = `Voyage - ${year}`;
+        } finally {
+            genBtn.disabled = false;
+        }
+    }
+</script>
+</th:block>
+</body>
+</html>

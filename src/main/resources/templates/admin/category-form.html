@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:replace="~{fragments/layout :: layout(pageTitle=${pageTitle},
+                                               content=~{::content},
+                                               extraHead=~{},
+                                               extraScripts=~{})}">
+<head></head>
+<body>
+<th:block th:fragment="content">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/admin}">Administration</a></li>
+            <li class="breadcrumb-item"><a th:href="@{/admin/categories}">Catégories</a></li>
+            <li class="breadcrumb-item active" th:text="${pageTitle}">Formulaire</li>
+        </ol>
+    </nav>
+
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-tag me-2"></i>
+                        <span th:text="${pageTitle}">Catégorie</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+
+                    <form th:action="${category.id != null ? '/admin/categories/' + category.id : '/admin/categories'}"
+                          th:object="${category}"
+                          method="post"
+                          class="needs-validation"
+                          novalidate>
+
+                        <!-- Nom -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="name">
+                                <i class="bi bi-tag me-1"></i>Nom <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" id="name" th:field="*{name}"
+                                   class="form-control" th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'"
+                                   placeholder="Ex : Transport"/>
+                            <div class="invalid-feedback" th:errors="*{name}"></div>
+                        </div>
+
+                        <!-- Icône -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="icon">
+                                <i class="bi bi-emoji-smile me-1"></i>Icône emoji <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" id="icon" th:field="*{icon}"
+                                   class="form-control" th:classappend="${#fields.hasErrors('icon')} ? 'is-invalid'"
+                                   placeholder="Ex : ✈️"
+                                   maxlength="2"/>
+                            <small class="text-muted">Entrez un emoji (2 caractères max)</small>
+                            <div class="invalid-feedback" th:errors="*{icon}"></div>
+                        </div>
+
+                        <!-- Couleur -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="color">
+                                <i class="bi bi-palette me-1"></i>Couleur (optionnelle)
+                            </label>
+                            <div class="input-group">
+                                <input type="color" id="colorPicker"
+                                       class="form-control form-control-color"
+                                       style="max-width:80px;"
+                                       oninput="document.getElementById('color').value = this.value"/>
+                                <input type="text" id="color" th:field="*{color}"
+                                       class="form-control" th:classappend="${#fields.hasErrors('color')} ? 'is-invalid'"
+                                       placeholder="Laisser vide → badge gris, texte noir"
+                                       oninput="syncColorPicker(this.value)"/>
+                            </div>
+                            <small class="text-muted">Laissez vide pour un badge par défaut (fond gris, texte noir).</small>
+                            <div class="invalid-feedback" th:errors="*{color}"></div>
+                        </div>
+
+                        <!-- Actions -->
+                        <div class="d-flex gap-2 justify-content-end">
+                            <a th:href="@{/admin/categories}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-lg me-1"></i>Annuler
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-floppy me-1"></i>Enregistrer
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</th:block>
+<th:block th:fragment="extraScripts">
+<script>
+    // Sync color picker ↔ text field
+    function syncColorPicker(hex) {
+        if (/^#[0-9a-fA-F]{6}$/.test(hex)) {
+            document.getElementById('colorPicker').value = hex;
+        }
+    }
+    // Init picker on load
+    const colorInput = document.getElementById('color');
+    if (colorInput && colorInput.value) {
+        syncColorPicker(colorInput.value);
+    }
+</script>
+</th:block>
+</body>
+</html>

@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:replace="~{fragments/layout :: layout(pageTitle='Gestion des catégories',
+                                               content=~{::content},
+                                               extraHead=~{},
+                                               extraScripts=~{})}">
+<head></head>
+<body>
+<th:block th:fragment="content">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-4">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/admin}">Administration</a></li>
+            <li class="breadcrumb-item active">Catégories</li>
+        </ol>
+    </nav>
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1 class="h3 mb-0"><i class="bi bi-tag me-2 text-primary"></i>Catégories de dépense</h1>
+        <a th:href="@{/admin/categories/new}" class="btn btn-primary">
+            <i class="bi bi-plus-lg me-1"></i>Nouvelle catégorie
+        </a>
+    </div>
+
+    <!-- Flash messages -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i><span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i><span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <!-- Table -->
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div th:if="${#lists.isEmpty(categories)}" class="text-center py-5 text-muted">
+                <i class="bi bi-inbox display-3 mb-3 d-block"></i>
+                <p>Aucune catégorie trouvée.</p>
+            </div>
+
+            <div th:unless="${#lists.isEmpty(categories)}" class="table-responsive">
+                <table class="table table-hover mb-0">
+                    <thead class="table-light">
+                    <tr>
+                        <th>Catégorie</th>
+                        <th>Icône</th>
+                        <th>Couleur</th>
+                        <th class="text-center">Actions</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="cat : ${categories}">
+                        <td class="fw-semibold" th:text="${cat.name}">Transport</td>
+                        <td>
+                            <span style="font-size:1.5rem" th:text="${cat.icon}">✈️</span>
+                        </td>
+                        <td>
+                            <span class="badge px-3 py-2"
+                                  th:text="${cat.icon + ' ' + cat.name}"
+                                  th:style="${(cat.color != null and !#strings.isEmpty(cat.color))
+                                              ? 'background-color: ' + cat.color + '; color: white;'
+                                              : 'background-color: #e9ecef; color: #212529;'}">
+                            </span>
+                        </td>
+                        <td class="text-center text-nowrap">
+                            <a th:href="@{/admin/categories/{id}/edit(id=${cat.id})}"
+                               class="btn btn-sm btn-outline-secondary me-1">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <form th:action="@{/admin/categories/{id}/delete(id=${cat.id})}"
+                                  method="post" class="d-inline"
+                                  onsubmit="return confirm('Supprimer cette catégorie ?')">
+                                <button type="submit" class="btn btn-sm btn-outline-danger"
+                                        th:disabled="${!cat.editable}">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</th:block>
+</body>
+</html>
