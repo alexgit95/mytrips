@@ -5,14 +5,14 @@ import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class ExportDto {
-    private List<CategoryExportDto> categories;
-    private List<TripExportDto> trips;
-    private List<ExpenseExportDto> expenses;
+public class CategoryExportDto {
+    private Long id;
+    private String name;
+    private String icon;
+    private String color;
+    private Boolean editable;
 }

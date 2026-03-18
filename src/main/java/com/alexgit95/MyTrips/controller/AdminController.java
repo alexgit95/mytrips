@@ -129,29 +129,14 @@ public class AdminController {
             return "redirect:/admin";
         }
         try {
+            System.out.println("[CONTROLLER] Début de l'import...");
             dataService.importFromJson(file.getInputStream());
+            System.out.println("[CONTROLLER] Import réussi !");
             ra.addFlashAttribute("success", "Import réussi ! Toutes les données ont été remplacées.");
         } catch (Exception e) {
+            System.err.println("[CONTROLLER] Erreur lors de l'import : " + e.getMessage());
+            e.printStackTrace();
             ra.addFlashAttribute("error", "Erreur lors de l'import : " + e.getMessage());
-        }
-        return "redirect:/admin";
-    }
-
-    // ---------------------------
-    // Import HopWallet CSV
-    // ---------------------------
-    @PostMapping("/import-hopwallet")
-    public String importHopWallet(@RequestParam("file") MultipartFile file,
-                                  RedirectAttributes ra) {
-        if (file.isEmpty()) {
-            ra.addFlashAttribute("error", "Veuillez sélectionner un fichier CSV.");
-            return "redirect:/admin";
-        }
-        try {
-            dataService.importFromHopWalletCsv(file.getInputStream());
-            ra.addFlashAttribute("success", "Import HopWallet réussi ! Les voyages et dépenses ont été ajoutés.");
-        } catch (Exception e) {
-            ra.addFlashAttribute("error", "Erreur lors de l'import HopWallet : " + e.getMessage());
         }
         return "redirect:/admin";
     }
