@@ -67,6 +67,7 @@ public class DataImportExportService {
         objectMapper.writerWithDefaultPrettyPrinter()
                 .writeValue(out, ExportDto.builder()
                         .trips(tripDtos).expenses(expenseDtos).build());
+        out.flush();
     }
 
     // ----------------------------------------------------------------
