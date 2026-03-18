@@ -13,7 +13,7 @@
     <div class="row g-4">
 
         <!-- Export card -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-primary text-white">
                     <h5 class="mb-0"><i class="bi bi-cloud-download me-2"></i>Exporter les données</h5>
@@ -30,8 +30,8 @@
             </div>
         </div>
 
-        <!-- Import card -->
-        <div class="col-md-4">
+        <!-- Import JSON card -->
+        <div class="col-md-3">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-warning text-dark">
                     <h5 class="mb-0"><i class="bi bi-cloud-upload me-2"></i>Importer des données</h5>
@@ -58,8 +58,35 @@
             </div>
         </div>
 
+        <!-- Import HopWallet card -->
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-success text-white">
+                    <h5 class="mb-0"><i class="bi bi-file-earmark-spreadsheet me-2"></i>Importer HopWallet</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Importez vos données depuis une export CSV de l'application HopWallet.
+                        Les voyages et dépenses seront ajoutés à vos données existantes.
+                    </p>
+                    <form th:action="@{/admin/import-hopwallet}"
+                          method="post"
+                          enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="hopwallet-file" class="form-label fw-semibold">Fichier CSV HopWallet</label>
+                            <input type="file" id="hopwallet-file" name="file"
+                                   class="form-control" accept=".csv" required/>
+                        </div>
+                        <button type="submit" class="btn btn-success w-100">
+                            <i class="bi bi-upload me-2"></i>Importer HopWallet
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
         <!-- Categories card -->
-        <div class="col-md-4">
+        <div class="col-md-3">
             <div class="card shadow-sm h-100">
                 <div class="card-header bg-info text-white">
                     <h5 class="mb-0"><i class="bi bi-tag me-2"></i>Gérer les catégories</h5>

@@ -3,6 +3,7 @@ package com.alexgit95.MyTrips.controller;
 import com.alexgit95.MyTrips.model.CategoryEntity;
 import com.alexgit95.MyTrips.service.CategoryService;
 import com.alexgit95.MyTrips.service.DataImportExportService;
+import com.opencsv.exceptions.CsvException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -122,6 +123,25 @@ public class AdminController {
             ra.addFlashAttribute("success", "Import réussi ! Toutes les données ont été remplacées.");
         } catch (Exception e) {
             ra.addFlashAttribute("error", "Erreur lors de l'import : " + e.getMessage());
+        }
+        return "redirect:/admin";
+    }
+
+    // ---------------------------
+    // Import HopWallet CSV
+    // ---------------------------
+    @PostMapping("/import-hopwallet")
+    public String importHopWallet(@RequestParam("file") MultipartFile file,
+                                  RedirectAttributes ra) {
+        if (file.isEmpty()) {
+            ra.addFlashAttribute("error", "Veuillez sélectionner un fichier CSV.");
+            return "redirect:/admin";
+        }
+        try {
+            dataService.importFromHopWalletCsv(file.getInputStream());
+            ra.addFlashAttribute("success", "Import HopWallet réussi ! Les voyages et dépenses ont été ajoutés.");
+        } catch (Exception e) {
+            ra.addFlashAttribute("error", "Erreur lors de l'import HopWallet : " + e.getMessage());
         }
         return "redirect:/admin";
     }
