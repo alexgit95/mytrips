@@ -40,34 +40,50 @@ public class DataImportExportService {
     // ----------------------------------------------------------------
     @Transactional(readOnly = true)
     public void exportToJson(OutputStream out) throws IOException {
+        try {
+            System.out.println("[EXPORT] Démarrage de l'export JSON...");
+            
+            List<Trip>    trips    = tripRepository.findAll();
+            List<Expense> expenses = expenseRepository.findAll();
+            System.out.println("[EXPORT] Voyages trouvés : " + trips.size());
+            System.out.println("[EXPORT] Dépenses trouvées : " + expenses.size());
 
-        List<Trip>    trips    = tripRepository.findAll();
-        List<Expense> expenses = expenseRepository.findAll();
+            List<TripExportDto> tripDtos = trips.stream()
+                    .map(t -> TripExportDto.builder()
+                            .id(t.getId()).name(t.getName())
+                            .startDate(t.getStartDate()).endDate(t.getEndDate())
+                            .budget(t.getBudget()).imageUrl(t.getImageUrl())
+                            .dailyBudgetThreshold(t.getDailyBudgetThreshold())
+                            .dailyExpenseBudget(t.getDailyExpenseBudget())
+                            .latitude(t.getLatitude()).longitude(t.getLongitude())
+                            .build())
+                    .toList();
 
-        List<TripExportDto> tripDtos = trips.stream()
-                .map(t -> TripExportDto.builder()
-                        .id(t.getId()).name(t.getName())
-                        .startDate(t.getStartDate()).endDate(t.getEndDate())
-                        .budget(t.getBudget()).imageUrl(t.getImageUrl())
-                        .dailyBudgetThreshold(t.getDailyBudgetThreshold())
-                        .dailyExpenseBudget(t.getDailyExpenseBudget())
-                        .latitude(t.getLatitude()).longitude(t.getLongitude())
-                        .build())
-                .toList();
+            List<ExpenseExportDto> expenseDtos = expenses.stream()
+                    .map(e -> ExpenseExportDto.builder()
+                            .id(e.getId()).amount(e.getAmount())
+                            .date(e.getDate()).categoryName(e.getCategory().getName())
+                            .label(e.getLabel()).numberOfDays(e.getNumberOfDays())
+                            .tripId(e.getTrip().getId())
+                            .build())
+                    .toList();
 
-        List<ExpenseExportDto> expenseDtos = expenses.stream()
-                .map(e -> ExpenseExportDto.builder()
-                        .id(e.getId()).amount(e.getAmount())
-                        .date(e.getDate()).categoryName(e.getCategory().getName())
-                        .label(e.getLabel()).numberOfDays(e.getNumberOfDays())
-                        .tripId(e.getTrip().getId())
-                        .build())
-                .toList();
+            System.out.println("[EXPORT] Sérialisation des DTOs...");
+            ExportDto exportData = ExportDto.builder()
+                    .trips(tripDtos)
+                    .expenses(expenseDtos)
+                    .build();
 
-        objectMapper.writerWithDefaultPrettyPrinter()
-                .writeValue(out, ExportDto.builder()
-                        .trips(tripDtos).expenses(expenseDtos).build());
-        out.flush();
+            objectMapper.writerWithDefaultPrettyPrinter()
+                    .writeValue(out, exportData);
+            
+            out.flush();
+            System.out.println("[EXPORT] Export terminé avec succès !");
+        } catch (Exception e) {
+            System.err.println("[EXPORT] Erreur lors de l'export : " + e.getMessage());
+            e.printStackTrace();
+            throw e;
+        }
     }
 
     // ----------------------------------------------------------------

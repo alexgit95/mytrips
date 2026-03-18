@@ -100,12 +100,22 @@ public class AdminController {
     // ---------------------------
     @GetMapping("/export")
     public void export(HttpServletResponse response) throws IOException {
-        String filename = "mytrips-export-"
-                + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
-                + ".json";
-        response.setContentType("application/json");
-        response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-        dataService.exportToJson(response.getOutputStream());
+        try {
+            String filename = "mytrips-export-"
+                    + LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd-HHmmss"))
+                    + ".json";
+            response.setContentType("application/json");
+            response.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+            
+            try (var out = response.getOutputStream()) {
+                dataService.exportToJson(out);
+                out.flush();
+            }
+        } catch (Exception e) {
+            System.err.println("Erreur lors de l'export JSON : " + e.getMessage());
+            e.printStackTrace();
+            response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Erreur lors de l'export : " + e.getMessage());
+        }
     }
 
     // ---------------------------
