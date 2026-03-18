@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:replace="~{fragments/layout :: layout(pageTitle=${'Planner – ' + trip.name},
+                                               content=~{::content},
+                                               extraHead=~{::extraHead},
+                                               extraScripts=~{::extraScripts})}">
+<head></head>
+<body>
+
+<th:block th:fragment="extraHead">
+<style>
+/* ── Timeline ─────────────────────────────────────────────── */
+.planner-timeline { position: relative; padding-left: 2rem; }
+.planner-timeline::before {
+    content: '';
+    position: absolute;
+    left: .75rem;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: var(--bs-primary);
+    opacity: .25;
+}
+.timeline-day-group { margin-bottom: 2rem; }
+.timeline-day-label {
+    position: relative;
+    font-weight: 700;
+    font-size: .85rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    color: var(--bs-primary);
+    margin-bottom: .75rem;
+}
+.timeline-day-label::before {
+    content: '';
+    position: absolute;
+    left: -1.65rem;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px; height: 14px;
+    border-radius: 50%;
+    background: var(--bs-primary);
+}
+.event-card {
+    cursor: pointer;
+    border-left: 3px solid var(--bs-primary);
+    transition: box-shadow .15s, transform .15s;
+}
+.event-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.1); transform: translateY(-1px); }
+.event-card .event-time {
+    font-size: .8rem;
+    font-weight: 600;
+    color: var(--bs-secondary);
+    white-space: nowrap;
+}
+.event-card .event-name { font-weight: 600; }
+.event-card .event-location { font-size: .85rem; color: #6c757d; }
+</style>
+</th:block>
+
+<th:block th:fragment="content">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/trips}">Voyages</a></li>
+            <li class="breadcrumb-item"><a th:href="@{/trips/{id}(id=${trip.id})}" th:text="${trip.name}">Voyage</a></li>
+            <li class="breadcrumb-item active">Planner</li>
+        </ol>
+    </nav>
+
+    <!-- Page header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <div>
+            <h3 class="fw-bold mb-0">
+                <i class="bi bi-calendar-week me-2 text-primary"></i>Planner
+            </h3>
+            <p class="text-muted small mb-0" th:text="${trip.name}"></p>
+        </div>
+        <a th:href="@{/trips/{id}(id=${trip.id})}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Retour au voyage
+        </a>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- ════════════════════════════════════════════════════
+             SECTION 1 — Timeline
+        ═══════════════════════════════════════════════════════ -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-calendar3 me-2 text-primary"></i>Programme du voyage</h6>
+                    <span class="badge bg-secondary"
+                          th:text="${#maps.size(eventsByDay) == 0 ? 'Aucun événement' :
+                                     #maps.size(eventsByDay) + ' jour(s)'}"></span>
+                </div>
+                <div class="card-body">
+
+                    <!-- Empty state -->
+                    <div th:if="${#maps.isEmpty(eventsByDay)}" class="text-center py-5 text-muted">
+                        <i class="bi bi-calendar-x display-4 mb-3 d-block"></i>
+                        <p>Aucun événement planifié pour ce voyage.</p>
+                        <p class="small">Utilisez le formulaire ci-dessous pour ajouter votre premier événement.</p>
+                    </div>
+
+                    <!-- Timeline -->
+                    <div th:unless="${#maps.isEmpty(eventsByDay)}" class="planner-timeline">
+                        <div th:each="dayEntry : ${eventsByDay}" class="timeline-day-group">
+
+                            <!-- Day label -->
+                            <div class="timeline-day-label"
+                                 th:text="${#temporals.format(dayEntry.key, 'EEEE d MMMM yyyy')}">
+                            </div>
+
+                            <!-- Events for this day -->
+                            <div th:each="event : ${dayEntry.value}" class="mb-2">
+                                <div class="card event-card"
+                                     th:data-event-id="${event.id}"
+                                     onclick="openEditModal(this)">
+                                    <div class="card-body py-2 px-3">
+                                        <div class="d-flex align-items-start gap-3">
+                                            <span class="event-time mt-1"
+                                                  th:text="${#temporals.format(event.eventDateTime, 'HH:mm')}">00:00</span>
+                                            <div class="flex-grow-1 min-w-0">
+                                                <div class="event-name" th:text="${event.name}">Nom</div>
+                                                <div th:if="${event.location != null and !#strings.isEmpty(event.location)}"
+                                                     class="event-location">
+                                                    <i class="bi bi-geo-alt me-1"></i>
+                                                    <span th:text="${event.location}"></span>
+                                                </div>
+                                                <div th:if="${event.comment != null and !#strings.isEmpty(event.comment)}"
+                                                     class="event-location mt-1" style="white-space:pre-line">
+                                                    <i class="bi bi-chat-text me-1"></i>
+                                                    <span th:text="${event.comment}"></span>
+                                                </div>
+                                            </div>
+                                            <div class="d-flex gap-1 flex-shrink-0">
+                                                <!-- Google Maps button (only if location is set) -->
+                                                <a th:if="${event.location != null and !#strings.isEmpty(event.location)}"
+                                                   th:href="'https://www.google.com/maps/dir/?api=1&destination=' + ${#strings.replace(event.location, ' ', '+')}"
+                                                   target="_blank" rel="noopener"
+                                                   class="btn btn-sm btn-outline-success"
+                                                   title="Ouvrir dans Google Maps"
+                                                   onclick="event.stopPropagation()">
+                                                    <i class="bi bi-map"></i>
+                                                </a>
+                                                <!-- Edit trigger -->
+                                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                                        title="Modifier" onclick="event.stopPropagation(); openEditModal(this.closest('.event-card'))">
+                                                    <i class="bi bi-pencil"></i>
+                                                </button>
+                                                <!-- Delete -->
+                                                <form th:action="@{/trips/{tid}/planner/events/{eid}/delete(tid=${trip.id}, eid=${event.id})}"
+                                                      method="post" class="d-inline"
+                                                      onsubmit="return confirm('Supprimer cet événement ?')"
+                                                      onclick="event.stopPropagation()">
+                                                    <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                                                        <i class="bi bi-trash"></i>
+                                                    </button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+
+        <!-- ════════════════════════════════════════════════════
+             SECTION 2 — Créer un événement
+        ═══════════════════════════════════════════════════════ -->
+        <div class="col-lg-4">
+
+            <!-- Formulaire Nouveau événement -->
+            <div class="card shadow-sm" id="createCard">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvel événement</h6>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/trips/{id}/planner/events(id=${trip.id})}"
+                          th:object="${newEvent}" method="post" novalidate>
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="newName">Nom de l'événement <span class="text-danger">*</span></label>
+                            <input type="text" id="newName" class="form-control"
+                                   th:field="*{name}"
+                                   th:classappend="${#fields.hasErrors('name')} ? 'is-invalid' : ''"
+                                   placeholder="Ex: Visite du Louvre"/>
+                            <div class="invalid-feedback" th:errors="*{name}"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="newDateTime">Date et heure <span class="text-danger">*</span></label>
+                            <input type="datetime-local" id="newDateTime" class="form-control"
+                                   th:field="*{eventDateTime}"
+                                   th:classappend="${#fields.hasErrors('eventDateTime')} ? 'is-invalid' : ''"/>
+                            <div class="invalid-feedback" th:errors="*{eventDateTime}"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="newLocation">Lieu / Adresse</label>
+                            <input type="text" id="newLocation" class="form-control"
+                                   th:field="*{location}"
+                                   placeholder="Ex: Rue de Rivoli, Paris"/>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="newComment">Commentaire</label>
+                            <textarea id="newComment" class="form-control" rows="3"
+                                      th:field="*{comment}"
+                                      placeholder="Notes, infos pratiques…"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-plus-lg me-1"></i>Ajouter l'événement
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         Modal — Modifier un événement
+    ═══════════════════════════════════════════════════════ -->
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title" id="editModalLabel">
+                        <i class="bi bi-pencil-square me-2"></i>Modifier l'événement
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="editForm" method="post" novalidate>
+                    <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="editName">Nom de l'événement <span class="text-danger">*</span></label>
+                            <input type="text" id="editName" name="name" class="form-control" required/>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="editDateTime">Date et heure <span class="text-danger">*</span></label>
+                            <input type="datetime-local" id="editDateTime" name="eventDateTime" class="form-control" required/>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="editLocation">Lieu / Adresse</label>
+                            <input type="text" id="editLocation" name="location" class="form-control"/>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="editComment">Commentaire</label>
+                            <textarea id="editComment" name="comment" class="form-control" rows="3"
+                                      placeholder="Notes, infos pratiques…"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-check-lg me-1"></i>Enregistrer
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Hidden data for edit modal — serialised server-side events -->
+    <div id="events-data" style="display:none">
+        <span th:each="dayEntry : ${eventsByDay}">
+            <span th:each="event : ${dayEntry.value}"
+                  th:data-id="${event.id}"
+                  th:data-name="${event.name}"
+                  th:data-datetime="${#temporals.format(event.eventDateTime, 'yyyy-MM-dd') + 'T' + #temporals.format(event.eventDateTime, 'HH:mm')}"
+                  th:data-location="${event.location != null ? event.location : ''}"
+                  th:data-comment="${event.comment != null ? event.comment : ''}"
+                  th:data-action="@{/trips/{tid}/planner/events/{eid}(tid=${trip.id}, eid=${event.id})}">
+            </span>
+        </span>
+    </div>
+
+</th:block>
+
+<th:block th:fragment="extraScripts">
+<script>
+(function () {
+    // Build a lookup map from event data spans
+    const eventsMap = {};
+    document.querySelectorAll('#events-data span[data-id]').forEach(function (span) {
+        eventsMap[span.dataset.id] = {
+            name:     span.dataset.name,
+            datetime: span.dataset.datetime,
+            location: span.dataset.location,
+            comment:  span.dataset.comment,
+            action:   span.dataset.action
+        };
+    });
+
+    window.openEditModal = function (card) {
+        const eventId = card.dataset.eventId;
+        const data = eventsMap[eventId];
+        if (!data) return;
+
+        document.getElementById('editName').value     = data.name;
+        document.getElementById('editDateTime').value = data.datetime;
+        document.getElementById('editLocation').value = data.location;
+        document.getElementById('editComment').value  = data.comment;
+        document.getElementById('editForm').action    = data.action;
+
+        const modal = new bootstrap.Modal(document.getElementById('editModal'));
+        modal.show();
+    };
+})();
+</script>
+</th:block>
+
+</body>
+</html>

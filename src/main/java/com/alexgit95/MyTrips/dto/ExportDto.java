@@ -15,4 +15,5 @@ public class ExportDto {
     private List<CategoryExportDto> categories;
     private List<TripExportDto> trips;
     private List<ExpenseExportDto> expenses;
+    private List<PlannerEventExportDto> plannerEvents;
 }

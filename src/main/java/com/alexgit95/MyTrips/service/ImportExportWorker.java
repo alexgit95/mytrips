@@ -3,12 +3,15 @@ package com.alexgit95.MyTrips.service;
 import com.alexgit95.MyTrips.dto.CategoryExportDto;
 import com.alexgit95.MyTrips.dto.ExportDto;
 import com.alexgit95.MyTrips.dto.ExpenseExportDto;
+import com.alexgit95.MyTrips.dto.PlannerEventExportDto;
 import com.alexgit95.MyTrips.dto.TripExportDto;
 import com.alexgit95.MyTrips.model.CategoryEntity;
 import com.alexgit95.MyTrips.model.Expense;
+import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
 import com.alexgit95.MyTrips.repository.CategoryRepository;
 import com.alexgit95.MyTrips.repository.ExpenseRepository;
+import com.alexgit95.MyTrips.repository.PlannerEventRepository;
 import com.alexgit95.MyTrips.repository.TripRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
@@ -34,6 +37,7 @@ public class ImportExportWorker {
     private final CategoryRepository categoryRepository;
     private final TripRepository tripRepository;
     private final ExpenseRepository expenseRepository;
+    private final PlannerEventRepository plannerEventRepository;
     private final CategoryService categoryService;
     private final ObjectMapper objectMapper;
 
@@ -52,9 +56,11 @@ public class ImportExportWorker {
 
             List<Trip> trips = tripRepository.findAll();
             List<Expense> expenses = expenseRepository.findAll();
+            List<PlannerEvent> plannerEvents = plannerEventRepository.findAll();
             System.out.println("[EXPORT] Catégories custom trouvées : " + customCategories.size());
             System.out.println("[EXPORT] Voyages trouvés : " + trips.size());
             System.out.println("[EXPORT] Dépenses trouvées : " + expenses.size());
+            System.out.println("[EXPORT] Événements planner trouvés : " + plannerEvents.size());
 
             List<CategoryExportDto> categoryDtos = customCategories.stream()
                     .map(c -> CategoryExportDto.builder()
@@ -84,11 +90,22 @@ public class ImportExportWorker {
                             .build())
                     .toList();
 
+            List<PlannerEventExportDto> plannerEventDtos = plannerEvents.stream()
+                    .map(pe -> PlannerEventExportDto.builder()
+                            .id(pe.getId()).name(pe.getName())
+                            .eventDateTime(pe.getEventDateTime())
+                            .location(pe.getLocation())
+                            .comment(pe.getComment())
+                            .tripId(pe.getTrip().getId())
+                            .build())
+                    .toList();
+
             System.out.println("[EXPORT] Sérialisation des DTOs...");
             ExportDto exportData = ExportDto.builder()
                     .categories(categoryDtos)
                     .trips(tripDtos)
                     .expenses(expenseDtos)
+                    .plannerEvents(plannerEventDtos)
                     .build();
 
             objectMapper.writerWithDefaultPrettyPrinter()
@@ -111,8 +128,9 @@ public class ImportExportWorker {
             ExportDto data = objectMapper.readValue(in, ExportDto.class);
             System.out.println("[IMPORT] Données JSON lues avec succès");
 
-            // Suppression UNIQUEMENT des dépenses et voyages (pas les catégories)
+            // Suppression UNIQUEMENT des dépenses, événements planner et voyages (pas les catégories)
             System.out.println("[IMPORT] Suppression des données existantes...");
+            plannerEventRepository.deleteAll();
             expenseRepository.deleteAll();
             tripRepository.deleteAll();
             System.out.println("[IMPORT] Nettoyage terminé");
@@ -228,6 +246,35 @@ public class ImportExportWorker {
                 System.err.println("[IMPORT] Erreur lors de l'importation des dépenses : " + ex.getMessage());
                 ex.printStackTrace();
                 throw new IOException("Erreur lors de l'importation des dépenses : " + ex.getMessage(), ex);
+            }
+
+            // ===== ÉTAPE 4 : Créer les événements planner =====
+            System.out.println("[IMPORT] Importation des événements planner...");
+            if (data.getPlannerEvents() != null && !data.getPlannerEvents().isEmpty()) {
+                List<PlannerEvent> plannerEventsToSave = new ArrayList<>();
+                int plannerOk = 0;
+                int plannerErreur = 0;
+                for (PlannerEventExportDto dto : data.getPlannerEvents()) {
+                    Trip trip = tripById.get(dto.getTripId());
+                    if (trip == null) {
+                        System.err.println("[IMPORT] Voyage non trouvé pour l'événement planner (tripId: " + dto.getTripId() + ")");
+                        plannerErreur++;
+                        continue;
+                    }
+                    plannerEventsToSave.add(PlannerEvent.builder()
+                            .name(dto.getName())
+                            .eventDateTime(dto.getEventDateTime())
+                            .location(dto.getLocation())
+                            .comment(dto.getComment())
+                            .trip(trip)
+                            .build());
+                    plannerOk++;
+                }
+                plannerEventRepository.saveAll(plannerEventsToSave);
+                plannerEventRepository.flush();
+                System.out.println("[IMPORT] Événements planner importés (OK: " + plannerOk + ", Erreurs: " + plannerErreur + ")");
+            } else {
+                System.out.println("[IMPORT] Aucun événement planner à importer.");
             }
 
             System.out.println("[IMPORT] Import terminé avec succès !");

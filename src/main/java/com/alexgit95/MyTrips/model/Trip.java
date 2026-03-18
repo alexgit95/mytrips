@@ -59,4 +59,10 @@ public class Trip {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<Expense> expenses = new ArrayList<>();
+
+    @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<PlannerEvent> plannerEvents = new ArrayList<>();
 }
