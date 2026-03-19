@@ -16,6 +16,8 @@
         </a>
     </div>
 
+    
+
     <!-- Empty state -->
     <div th:if="${#lists.isEmpty(trips)}" class="text-center py-5 text-muted">
         <i class="bi bi-airplane display-1 mb-3 d-block"></i>
@@ -30,9 +32,29 @@
     <div id="worldMap" style="height:320px; border-radius:12px; border:1px solid #dee2e6; margin-bottom:2rem;"
          th:attr="data-markers=${markersJson}"></div>
 
+    <!-- Search bar -->
+    <div class="mb-4">
+        <div class="input-group">
+            <span class="input-group-text bg-white border-end-0">
+                <i class="bi bi-search text-muted"></i>
+            </span>
+            <input type="text" 
+                   id="searchInput" 
+                   class="form-control border-start-0" 
+                   placeholder="Rechercher un voyage par nom..." 
+                   autocomplete="off"/>
+            <button class="btn btn-outline-secondary" type="button" id="clearSearch" style="display: none;">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+        <small class="text-muted d-block mt-1">
+            <span id="searchResultCount">Tous les voyages affichés</span>
+        </small>
+    </div>
+
     <!-- Trip cards -->
-    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
-        <div class="col" th:each="trip : ${trips}">
+    <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4" id="tripsContainer">
+        <div class="col trip-card-col" th:each="trip : ${trips}" th:id="'trip-card-' + ${trip.id}" th:data-trip-name="${trip.name}">
             <div class="card h-100 shadow-sm trip-card">
             <!-- Image -->
                 <div class="trip-card-img-wrapper">
@@ -116,29 +138,75 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 (function() {
+    // ========== Carte Leaflet ==========
     const mapEl = document.getElementById('worldMap');
-    if (!mapEl) return;
-    const markers = JSON.parse(mapEl.dataset.markers || '[]');
+    if (mapEl) {
+        const markers = JSON.parse(mapEl.dataset.markers || '[]');
 
-    const worldMap = L.map('worldMap', { scrollWheelZoom: false }).setView([20, 10], 2);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-    }).addTo(worldMap);
+        const worldMap = L.map('worldMap', { scrollWheelZoom: false }).setView([20, 10], 2);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+        }).addTo(worldMap);
 
-    markers.forEach(function(t) {
-        const popup = `<div style="min-width:140px;">
-            ${t.imageUrl ? `<img src="${t.imageUrl}" style="width:100%;height:80px;object-fit:cover;border-radius:4px;margin-bottom:6px;" onerror="this.style.display='none'"/>` : ''}
-            <strong>${t.name}</strong><br/>
-            <a href="/trips/${t.id}" class="btn btn-sm btn-primary mt-1" style="font-size:0.75rem;">Voir le détail</a>
-        </div>`;
-        L.marker([t.lat, t.lng]).addTo(worldMap).bindPopup(popup);
-    });
+        markers.forEach(function(t) {
+            const popup = `<div style="min-width:140px;">
+                ${t.imageUrl ? `<img src="${t.imageUrl}" style="width:100%;height:80px;object-fit:cover;border-radius:4px;margin-bottom:6px;" onerror="this.style.display='none'"/>` : ''}
+                <strong>${t.name}</strong><br/>
+                <a href="/trips/${t.id}" class="btn btn-sm btn-primary mt-1" style="font-size:0.75rem;">Voir le détail</a>
+            </div>`;
+            L.marker([t.lat, t.lng]).addTo(worldMap).bindPopup(popup);
+        });
 
-    if (markers.length === 1) {
-        worldMap.setView([markers[0].lat, markers[0].lng], 6);
-    } else if (markers.length > 1) {
-        const group = L.featureGroup(markers.map(t => L.marker([t.lat, t.lng])));
-        worldMap.fitBounds(group.getBounds().pad(0.2));
+        if (markers.length === 1) {
+            worldMap.setView([markers[0].lat, markers[0].lng], 6);
+        } else if (markers.length > 1) {
+            const group = L.featureGroup(markers.map(t => L.marker([t.lat, t.lng])));
+            worldMap.fitBounds(group.getBounds().pad(0.2));
+        }
+    }
+
+    // ========== Recherche de voyages ==========
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearch');
+    const resultCountSpan = document.getElementById('searchResultCount');
+    const tripCardCols = document.querySelectorAll('.trip-card-col');
+
+    if (searchInput && tripCardCols.length > 0) {
+        searchInput.addEventListener('input', function() {
+            const query = this.value.toLowerCase().trim();
+            let visibleCount = 0;
+
+            tripCardCols.forEach(function(col) {
+                const tripName = col.dataset.tripName.toLowerCase();
+                const matches = tripName.includes(query);
+                col.style.display = matches ? '' : 'none';
+                if (matches) visibleCount++;
+            });
+
+            // Afficher/masquer le bouton de suppression
+            clearSearchBtn.style.display = query ? 'block' : 'none';
+
+            // Mettre à jour le message de résultats
+            if (query) {
+                resultCountSpan.textContent = visibleCount + ' voyage' + (visibleCount !== 1 ? 's' : '') + ' trouvé' + (visibleCount !== 1 ? 's' : '');
+            } else {
+                resultCountSpan.textContent = 'Tous les voyages affichés';
+            }
+        });
+
+        // Bouton de suppression de la recherche
+        clearSearchBtn.addEventListener('click', function() {
+            searchInput.value = '';
+            searchInput.dispatchEvent(new Event('input'));
+            searchInput.focus();
+        });
+
+        // Effacer la recherche au focus si elle est vide
+        searchInput.addEventListener('focus', function() {
+            if (this.value === '') {
+                clearSearchBtn.style.display = 'none';
+            }
+        });
     }
 })();
 </script>
