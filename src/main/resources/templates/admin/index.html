@@ -151,6 +151,55 @@
             </div>
         </div>
 
+        <!-- Reverse geocoding card -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header text-white"
+                     th:classappend="${geocodingEnabled} ? 'bg-success' : 'bg-secondary'">
+                    <h5 class="mb-0">
+                        <i class="bi bi-map me-2"></i>Géocodage inverse
+                        <span class="badge ms-2 text-uppercase"
+                              th:classappend="${geocodingEnabled} ? 'bg-light text-success' : 'bg-light text-secondary'"
+                              th:text="${geocodingEnabled} ? 'Nominatim' : 'Désactivé'">mode</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        Mode actif&nbsp;:
+                        <strong th:text="${geocodingEnabled} ? 'Nominatim (adresses)' : 'Coordonnées GPS'">–</strong>
+                    </p>
+                    <!-- Flash message -->  
+                    <div th:if="${geocodingSuccess}" class="alert alert-info py-2 mb-2">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <span th:text="${geocodingSuccess}"></span>
+                    </div>
+
+                    <div th:if="${geocodingEnabled}" class="alert alert-success py-2 mb-2">
+                        <i class="bi bi-geo-alt me-2"></i>
+                        <strong>Nominatim</strong> est actif — l'adresse sera récupérée depuis les coordonnées GPS pour la fonctionnalité "ici et maintenant".
+                    </div>
+                    <div th:unless="${geocodingEnabled}" class="alert alert-secondary py-2 mb-2">
+                        <i class="bi bi-pin-map me-2"></i>
+                        Géocodage <strong>désactivé</strong> — les coordonnées GPS seront stockées directement.
+                        Utilise l'API Nominatim (OpenStreetMap) quand activé.
+                    </div>
+
+                    <!-- Toggle button -->
+                    <form th:action="@{/admin/reverse-geocoding}" method="post" class="d-flex gap-2">
+                        <input type="hidden" name="enabled" th:value="${!geocodingEnabled}"/>
+                        <button type="submit" class="btn w-100"
+                                th:classappend="${geocodingEnabled} ? 'btn-outline-secondary' : 'btn-outline-success'"
+                                th:text="${geocodingEnabled} ? '⬅ Désactiver' : '⬆ Activer (Nominatim)'">
+                        </button>
+                    </form>
+                    <small class="text-muted mt-1 d-block">
+                        Ce changement est actif jusqu'au redémarrage.
+                        La valeur définitive se configure via <code>GEOCODING_ENABLED</code> dans Portainer.
+                    </small>
+                </div>
+            </div>
+        </div>
+
     </div>
 
 </th:block>

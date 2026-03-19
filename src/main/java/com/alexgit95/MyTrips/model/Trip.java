@@ -68,4 +68,12 @@ public class Trip {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private List<PlannerEvent> plannerEvents = new ArrayList<>();
+
+    /**
+     * Vérifier si le voyage est en cours (entre startDate et endDate, aujourd'hui)
+     */
+    public boolean isOngoing() {
+        LocalDate today = LocalDate.now();
+        return !today.isBefore(startDate) && !today.isAfter(endDate);
+    }
 }

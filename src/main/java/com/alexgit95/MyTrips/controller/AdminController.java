@@ -4,7 +4,7 @@ import com.alexgit95.MyTrips.model.CategoryEntity;
 import com.alexgit95.MyTrips.service.CategoryService;
 import com.alexgit95.MyTrips.service.DataImportExportService;
 import com.alexgit95.MyTrips.service.GeoCountryResolver;
-import com.opencsv.exceptions.CsvException;
+import com.alexgit95.MyTrips.service.ReverseGeocodingService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -27,11 +27,13 @@ public class AdminController {
     private final DataImportExportService dataService;
     private final CategoryService         categoryService;
     private final GeoCountryResolver      geoCountryResolver;
+    private final ReverseGeocodingService reverseGeocodingService;
 
     @GetMapping
     public String index(Model model) {
         model.addAttribute("geoMode", geoCountryResolver.getMode());
         model.addAttribute("geoApiEnabled", geoCountryResolver.isApiEnabled());
+        model.addAttribute("geocodingEnabled", reverseGeocodingService.isEnabled());
         return "admin/index";
     }
 
@@ -42,6 +44,16 @@ public class AdminController {
         String label = apiEnabled ? "API BigDataCloud" : "Local (hors-ligne)";
         ra.addFlashAttribute("geoModeSuccess",
                 "Mode de résolution géographique changé en : " + label);
+        return "redirect:/admin";
+    }
+
+    @PostMapping("/reverse-geocoding")
+    public String changeReverseGeocoding(@RequestParam("enabled") boolean enabled,
+                                          RedirectAttributes ra) {
+        reverseGeocodingService.setEnabled(enabled);
+        String label = enabled ? "Nominatim (adresses)" : "Désactivé (coordonnées GPS)";
+        ra.addFlashAttribute("geocodingSuccess",
+                "Géocodage inverse changé en : " + label);
         return "redirect:/admin";
     }
 

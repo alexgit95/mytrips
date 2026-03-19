@@ -3,9 +3,11 @@ package com.alexgit95.MyTrips.controller;
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
 import com.alexgit95.MyTrips.service.PlannerEventService;
+import com.alexgit95.MyTrips.service.ReverseGeocodingService;
 import com.alexgit95.MyTrips.service.TripService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -13,7 +15,9 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.Map;
+import java.util.HashMap;
 
 @Controller
 @RequestMapping("/trips/{tripId}/planner")
@@ -22,6 +26,7 @@ public class PlannerController {
 
     private final TripService tripService;
     private final PlannerEventService plannerEventService;
+    private final ReverseGeocodingService reverseGeocodingService;
 
     // ---------------------------
     // Affichage du planner
@@ -109,5 +114,59 @@ public class PlannerController {
         plannerEventService.delete(eventId);
         ra.addFlashAttribute("success", "Événement supprimé.");
         return "redirect:/trips/" + tripId + "/planner";
+    }
+
+    // ---------------------------
+    // Créer un événement "ici et maintenant"
+    // ---------------------------
+    @PostMapping("/events/here-and-now")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> createHereAndNow(
+            @PathVariable Long tripId,
+            @RequestParam String name,
+            @RequestParam(required = false) Double latitude,
+            @RequestParam(required = false) Double longitude) {
+
+        Trip trip = tripService.findById(tripId);
+        Map<String, Object> response = new HashMap<>();
+
+        // Vérifier que le voyage est en cours
+        if (!trip.isOngoing()) {
+            response.put("success", false);
+            response.put("message", "Ce voyage n'est pas en cours");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        // Valider le nom
+        if (name == null || name.trim().isEmpty()) {
+            response.put("success", false);
+            response.put("message", "Le nom de l'événement est obligatoire");
+            return ResponseEntity.badRequest().body(response);
+        }
+
+        // Créer l'événement
+        PlannerEvent event = new PlannerEvent();
+        event.setName(name.trim());
+        event.setEventDateTime(LocalDateTime.now());
+
+        // Déterminer la localisation
+        String location = null;
+        if (latitude != null && longitude != null) {
+            // Essayer le géocodage inverse si activé
+            location = reverseGeocodingService.reverseGeocode(latitude, longitude);
+            
+            // Fallback sur les coordonnées GPS si le géocodage a échoué ou est désactivé
+            if (location == null) {
+                location = String.format("%.6f, %.6f", latitude, longitude);
+            }
+        }
+        
+        event.setLocation(location);
+        plannerEventService.create(tripId, event);
+
+        response.put("success", true);
+        response.put("message", "Événement créé avec succès !");
+        response.put("eventId", event.getId());
+        return ResponseEntity.ok(response);
     }
 }

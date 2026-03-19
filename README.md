@@ -42,6 +42,7 @@ services:
       APP_PASSWORD: votre_mot_de_passe
       APP_REMEMBER_ME_KEY: une_cle_secrete_longue_et_aleatoire
       GEO_API_ENABLED: "false"
+      GEOCODING_ENABLED: "false"
     depends_on:
       db:
         condition: service_healthy
@@ -79,6 +80,7 @@ volumes:
 | `APP_PASSWORD` | ✅ | `admin` | Mot de passe de connexion — **à changer en production** |
 | `APP_REMEMBER_ME_KEY` | ✅ | *(valeur par défaut non sécurisée)* | Clé de signature des cookies "Se souvenir de moi" — **générer une chaîne aléatoire longue** |
 | `GEO_API_ENABLED` | ❌ | `false` | `true` = active l'API BigDataCloud pour la résolution géographique (page Monde) ; `false` = résolution locale hors-ligne |
+| `GEOCODING_ENABLED` | ❌ | `false` | `true` = active l'API Nominatim (OpenStreetMap) pour convertir les coordonnées GPS en adresses dans le planner « ici et maintenant » ; `false` = stocke juste les coordonnées GPS |
 
 > **Note :** Le schéma de la base de données est créé et mis à jour automatiquement au démarrage (`ddl-auto=update`). Aucun script SQL n'est nécessaire.
 

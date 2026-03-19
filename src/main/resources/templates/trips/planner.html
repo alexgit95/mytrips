@@ -183,6 +183,13 @@
                     <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvel événement</h6>
                 </div>
                 <div class="card-body">
+                    <!-- Bouton "Ici et maintenant" - visible seulement si le voyage est en cours -->
+                    <div th:if="${trip.ongoing}" class="mb-3">
+                        <button type="button" class="btn btn-success w-100" id="hereAndNowBtn">
+                            <i class="bi bi-geo-alt me-2"></i>Ici et maintenant
+                        </button>
+                    </div>
+
                     <form th:action="@{/trips/{id}/planner/events(id=${trip.id})}"
                           th:object="${newEvent}" method="post" novalidate>
                         <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
@@ -318,6 +325,75 @@
         const modal = new bootstrap.Modal(document.getElementById('editModal'));
         modal.show();
     };
+
+    // Gestion du bouton "Ici et maintenant"
+    const hereAndNowBtn = document.getElementById('hereAndNowBtn');
+    if (hereAndNowBtn) {
+        hereAndNowBtn.addEventListener('click', function() {
+            const eventName = prompt('Nom de l\'événement:');
+            if (!eventName || eventName.trim() === '') {
+                return;
+            }
+
+            // Récupérer la géolocalisation
+            if (navigator.geolocation) {
+                hereAndNowBtn.disabled = true;
+                hereAndNowBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Localisation...';
+
+                navigator.geolocation.getCurrentPosition(
+                    function(position) {
+                        const latitude = position.coords.latitude;
+                        const longitude = position.coords.longitude;
+                        createHereAndNowEvent(eventName, latitude, longitude);
+                    },
+                    function(error) {
+                        console.warn('Erreur de géolocalisation:', error);
+                        // Créer l'événement sans géolocalisation
+                        createHereAndNowEvent(eventName, null, null);
+                    }
+                );
+            } else {
+                // Créer l'événement sans géolocalisation si le navigateur ne supporte pas
+                createHereAndNowEvent(eventName, null, null);
+            }
+        });
+    }
+
+    function createHereAndNowEvent(name, latitude, longitude) {
+        const tripId = window.location.pathname.split('/')[2];
+        const params = new URLSearchParams();
+        params.append('name', name);
+        if (latitude !== null && longitude !== null) {
+            params.append('latitude', latitude);
+            params.append('longitude', longitude);
+        }
+
+        fetch(`/trips/${tripId}/planner/events/here-and-now`, {
+            method: 'POST',
+            body: params,
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRF-Token': document.querySelector('input[name="_csrf"]')?.value || ''
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Recharger la page pour afficher le nouvel événement
+                window.location.reload();
+            } else {
+                alert('Erreur: ' + data.message);
+                hereAndNowBtn.disabled = false;
+                hereAndNowBtn.innerHTML = '<i class="bi bi-geo-alt me-2"></i>Ici et maintenant';
+            }
+        })
+        .catch(error => {
+            console.error('Erreur:', error);
+            alert('Une erreur est survenue');
+            hereAndNowBtn.disabled = false;
+            hereAndNowBtn.innerHTML = '<i class="bi bi-geo-alt me-2"></i>Ici et maintenant';
+        });
+    }
 })();
 </script>
 </th:block>
