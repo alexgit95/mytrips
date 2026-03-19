@@ -59,7 +59,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Pages publiques
                 .requestMatchers("/login", "/css/**", "/js/**", "/images/**",
-                                 "/webjars/**", "/favicon.ico").permitAll()
+                                 "/webjars/**", "/favicon.ico","/manifest.json").permitAll()
                 // Health check endpoint accessible sans authentification (pour Portainer)
                 .requestMatchers("/actuator/health").permitAll()
                 // Tout le reste nécessite d'être authentifié
