@@ -102,6 +102,55 @@
             </div>
         </div>
 
+        <!-- Geo resolution mode card -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header text-white"
+                     th:classappend="${geoApiEnabled} ? 'bg-success' : 'bg-secondary'">
+                    <h5 class="mb-0">
+                        <i class="bi bi-globe-europe-africa me-2"></i>Résolution géographique
+                        <span class="badge ms-2 text-uppercase"
+                              th:classappend="${geoApiEnabled} ? 'bg-light text-success' : 'bg-light text-secondary'"
+                              th:text="${geoApiEnabled} ? 'API' : 'Local'">mode</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <p class="mb-2">
+                        Mode actif&nbsp;:
+                        <strong th:text="${geoMode}">–</strong>
+                    </p>
+                    <!-- Flash message -->  
+                    <div th:if="${geoModeSuccess}" class="alert alert-info py-2 mb-2">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <span th:text="${geoModeSuccess}"></span>
+                    </div>
+
+                    <div th:if="${geoApiEnabled}" class="alert alert-success py-2 mb-2">
+                        <i class="bi bi-wifi me-2"></i>
+                        <strong>BigDataCloud</strong> est actif — résolution précise depuis les coordonnées GPS.
+                    </div>
+                    <div th:unless="${geoApiEnabled}" class="alert alert-secondary py-2 mb-2">
+                        <i class="bi bi-database me-2"></i>
+                        Mode <strong>hors-ligne</strong> — bounding boxes + centroïdes.
+                        Valeur par défaut depuis la variable <code>GEO_API_ENABLED</code>.
+                    </div>
+
+                    <!-- Toggle button -->
+                    <form th:action="@{/admin/geo-mode}" method="post" class="d-flex gap-2">
+                        <input type="hidden" name="apiEnabled" th:value="${!geoApiEnabled}"/>
+                        <button type="submit" class="btn w-100"
+                                th:classappend="${geoApiEnabled} ? 'btn-outline-secondary' : 'btn-outline-success'"
+                                th:text="${geoApiEnabled} ? '⬅ Passer en mode Local' : '⬆ Passer en mode API'">
+                        </button>
+                    </form>
+                    <small class="text-muted mt-1 d-block">
+                        Ce changement est actif jusqu'au redémarrage.
+                        La valeur définitive se configure via <code>GEO_API_ENABLED</code> dans Portainer.
+                    </small>
+                </div>
+            </div>
+        </div>
+
     </div>
 
 </th:block>

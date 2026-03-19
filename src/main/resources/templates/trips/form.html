@@ -114,6 +114,46 @@
                             <small class="text-muted">Définit la ligne de projection dans le graphique d'évolution des dépenses.</small>
                         </div>
 
+                        <!-- Pays principal -->
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="country">
+                                <i class="bi bi-globe me-1"></i>Pays principal (optionnel)
+                            </label>
+                            <input type="text" id="country" th:field="*{country}"
+                                   class="form-control"
+                                   placeholder="Ex : France, Italie, USA…"
+                                   list="countrySuggestions"/>
+                            <datalist id="countrySuggestions">
+                                <option value="France"/>
+                                <option value="Allemagne"/>
+                                <option value="Espagne"/>
+                                <option value="Italie"/>
+                                <option value="Portugal"/>
+                                <option value="Royaume-Uni"/>
+                                <option value="Belgique"/>
+                                <option value="Pays-Bas"/>
+                                <option value="Suisse"/>
+                                <option value="Autriche"/>
+                                <option value="Grèce"/>
+                                <option value="Croatie"/>
+                                <option value="Turquie"/>
+                                <option value="Maroc"/>
+                                <option value="Tunisie"/>
+                                <option value="Égypte"/>
+                                <option value="USA"/>
+                                <option value="Canada"/>
+                                <option value="Mexique"/>
+                                <option value="Brésil"/>
+                                <option value="Argentine"/>
+                                <option value="Thaïlande"/>
+                                <option value="Japon"/>
+                                <option value="Vietnam"/>
+                                <option value="Indonésie"/>
+                                <option value="Australie"/>
+                            </datalist>
+                            <small class="text-muted">Ce pays sera utilisé pour les statistiques mondiales.</small>
+                        </div>
+
                         <!-- Coordonnées géographiques -->
                         <div class="mb-3">
                             <label class="form-label fw-semibold">

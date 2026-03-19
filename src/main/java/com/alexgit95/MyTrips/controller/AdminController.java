@@ -3,6 +3,7 @@ package com.alexgit95.MyTrips.controller;
 import com.alexgit95.MyTrips.model.CategoryEntity;
 import com.alexgit95.MyTrips.service.CategoryService;
 import com.alexgit95.MyTrips.service.DataImportExportService;
+import com.alexgit95.MyTrips.service.GeoCountryResolver;
 import com.opencsv.exceptions.CsvException;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -25,10 +26,23 @@ public class AdminController {
 
     private final DataImportExportService dataService;
     private final CategoryService         categoryService;
+    private final GeoCountryResolver      geoCountryResolver;
 
     @GetMapping
     public String index(Model model) {
+        model.addAttribute("geoMode", geoCountryResolver.getMode());
+        model.addAttribute("geoApiEnabled", geoCountryResolver.isApiEnabled());
         return "admin/index";
+    }
+
+    @PostMapping("/geo-mode")
+    public String changeGeoMode(@RequestParam("apiEnabled") boolean apiEnabled,
+                                RedirectAttributes ra) {
+        geoCountryResolver.setApiEnabled(apiEnabled);
+        String label = apiEnabled ? "API BigDataCloud" : "Local (hors-ligne)";
+        ra.addFlashAttribute("geoModeSuccess",
+                "Mode de résolution géographique changé en : " + label);
+        return "redirect:/admin";
     }
 
     // ===== CATÉGORIES CRUD =====

@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:replace="~{fragments/layout :: layout(pageTitle='Carte du Monde',
+                                               content=~{::content},
+                                               extraHead=~{::extraHead},
+                                               extraScripts=~{::extraScripts})}">
+<head></head>
+<body>
+<th:block th:fragment="content">
+
+    <!-- Header -->
+    <div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+        <h1 class="h3 mb-0">
+            <i class="bi bi-globe-europe-africa me-2 text-primary"></i>Carte du Monde
+        </h1>
+        <a th:href="@{/trips}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Retour aux voyages
+        </a>
+    </div>
+
+    <!-- Global summary cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card-body py-3">
+                    <div class="display-5 fw-bold text-primary" th:text="${totalCountries}">0</div>
+                    <div class="small text-muted mt-1">
+                        <i class="bi bi-flag me-1"></i>Pays visités
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-6 col-md-3">
+            <div class="card border-0 shadow-sm text-center h-100">
+                <div class="card-body py-3">
+                    <div class="display-5 fw-bold text-success" th:text="${totalContinents}">0</div>
+                    <div class="small text-muted mt-1">
+                        <i class="bi bi-globe me-1"></i>Continents
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Empty state -->
+    <div th:if="${#maps.isEmpty(statsByContinent)}" class="text-center py-5 text-muted">
+        <i class="bi bi-globe display-1 mb-3 d-block"></i>
+        <h4>Aucun pays détecté</h4>
+        <p>Ajoutez un pays aux voyages (champ "Pays") ou des localisations aux événements du planificateur.</p>
+        <a th:href="@{/trips}" class="btn btn-primary mt-2">
+            <i class="bi bi-map me-1"></i>Voir mes voyages
+        </a>
+    </div>
+
+    <!-- Continent sections -->
+    <div th:each="entry : ${statsByContinent}" class="mb-5">
+
+        <!-- Continent header -->
+        <div class="d-flex align-items-center mb-3 pb-2 border-bottom">
+            <span th:text="${#strings.equals(entry.key,'Europe') ? '🌍' :
+                             #strings.equals(entry.key,'Amérique du Nord') ? '🌎' :
+                             #strings.equals(entry.key,'Amérique du Sud') ? '🌎' :
+                             #strings.equals(entry.key,'Afrique') ? '🌍' :
+                             #strings.equals(entry.key,'Asie') ? '🌏' :
+                             #strings.equals(entry.key,'Océanie') ? '🌏' : '🌐'}"
+                  class="fs-3 me-2"></span>
+            <h2 class="h4 mb-0" th:text="${entry.key}">Continent</h2>
+            <span class="badge bg-primary ms-3"
+                  th:text="${#lists.size(entry.value)} + ' pays'"></span>
+        </div>
+
+        <!-- Country flag grid -->
+        <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-3">
+
+            <div class="col" th:each="country : ${entry.value}">
+                <div class="card h-100 border-0 shadow-sm country-card"
+                     th:id="'country-' + ${country.isoCode}"
+                     style="cursor:default;">
+                    <div class="card-body p-3 text-center">
+
+                        <!-- Flag emoji -->
+                        <div class="flag-emoji mb-1" th:text="${country.flag}"
+                             style="font-size:2.5rem; line-height:1;">🏳</div>
+
+                        <!-- Country name -->
+                        <div class="fw-semibold small" th:text="${country.countryFr}">Pays</div>
+
+                        <!-- Source count badge -->
+                        <div class="mt-1">
+                            <span class="badge bg-secondary"
+                                  th:text="${#lists.size(country.sources)} + ' lieu(x)'"></span>
+                        </div>
+
+                        <!-- Department count for France -->
+                        <div th:if="${country.isoCode == 'FR' and not #lists.isEmpty(country.subdivisions)}"
+                             class="mt-1">
+                            <span class="badge bg-info text-dark"
+                                  th:text="${#lists.size(country.subdivisions)} + ' dépt(s)'"></span>
+                        </div>
+
+                        <!-- State count for USA -->
+                        <div th:if="${country.isoCode == 'US' and not #lists.isEmpty(country.subdivisions)}"
+                             class="mt-1">
+                            <span class="badge bg-warning text-dark"
+                                  th:text="${#lists.size(country.subdivisions)} + ' état(s)'"></span>
+                        </div>
+
+                    </div>
+
+                    <!-- Collapsible details -->
+                    <div th:if="${not #lists.isEmpty(country.sources) or not #lists.isEmpty(country.subdivisions)}"
+                         class="card-footer bg-transparent border-top-0 px-2 pb-2 pt-0">
+
+                        <button class="btn btn-link btn-sm p-0 text-decoration-none w-100 country-toggle"
+                                th:data-target="'#details-' + ${country.isoCode}">
+                            <i class="bi bi-chevron-down me-1 toggle-icon"></i>Détails
+                        </button>
+
+                        <div th:id="'details-' + ${country.isoCode}" class="country-details mt-2" style="display:none;">
+
+                            <!-- France departments -->
+                            <div th:if="${country.isoCode == 'FR' and not #lists.isEmpty(country.subdivisions)}">
+                                <div class="fw-semibold x-small text-muted mb-1" style="font-size:0.7rem;">DÉPARTEMENTS</div>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <span class="badge bg-info text-dark"
+                                          th:each="dept : ${country.subdivisions}"
+                                          th:text="${dept}"></span>
+                                </div>
+                            </div>
+
+                            <!-- USA states -->
+                            <div th:if="${country.isoCode == 'US' and not #lists.isEmpty(country.subdivisions)}">
+                                <div class="fw-semibold x-small text-muted mb-1" style="font-size:0.7rem;">ÉTATS</div>
+                                <div class="d-flex flex-wrap gap-1">
+                                    <span class="badge bg-warning text-dark"
+                                          th:each="state : ${country.subdivisions}"
+                                          th:text="${state}"></span>
+                                </div>
+                            </div>
+
+                            <!-- Sources -->
+                            <div class="mt-2">
+                                <div class="fw-semibold text-muted mb-1" style="font-size:0.7rem;">SOURCES</div>
+                                <ul class="list-unstyled mb-0">
+                                    <li th:each="src : ${country.sources}"
+                                        class="text-muted small d-flex align-items-start gap-1">
+                                        <i class="bi bi-pin-map-fill text-primary mt-1" style="flex-shrink:0;font-size:0.65rem;"></i>
+                                        <span th:text="${src}"></span>
+                                    </li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+    </div>
+
+</th:block>
+
+<th:block th:fragment="extraHead">
+    <style>
+        .country-card {
+            transition: transform 0.15s ease, box-shadow 0.15s ease;
+        }
+        .country-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 .5rem 1rem rgba(0,0,0,.12) !important;
+        }
+        .flag-emoji {
+            user-select: none;
+        }
+        .country-toggle {
+            font-size: 0.75rem;
+            color: #6c757d;
+        }
+        .country-toggle:hover {
+            color: #0d6efd;
+        }
+        .toggle-icon {
+            transition: transform 0.2s ease;
+        }
+        .toggle-icon.open {
+            transform: rotate(180deg);
+        }
+    </style>
+</th:block>
+
+<th:block th:fragment="extraScripts">
+    <script>
+        document.querySelectorAll('.country-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const target = document.querySelector(btn.getAttribute('data-target'));
+                if (!target) return;
+                const isOpen = target.style.display !== 'none';
+                target.style.display = isOpen ? 'none' : 'block';
+                btn.querySelector('.toggle-icon').classList.toggle('open', !isOpen);
+            });
+        });
+    </script>
+</th:block>
+
+</body>
+</html>

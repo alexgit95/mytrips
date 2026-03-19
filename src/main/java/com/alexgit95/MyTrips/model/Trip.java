@@ -50,6 +50,9 @@ public class Trip {
     @Builder.Default
     private BigDecimal dailyExpenseBudget = java.math.BigDecimal.ZERO;
 
+    // Pays principal du voyage (optionnel, ex: "France", "Italie", "USA")
+    private String country;
+
     // Coordonnées géographiques (optionnelles)
     private Double latitude;
     private Double longitude;

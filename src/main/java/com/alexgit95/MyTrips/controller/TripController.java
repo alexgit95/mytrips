@@ -149,6 +149,7 @@ public class TripController {
         existing.setDailyExpenseBudget(trip.getDailyExpenseBudget());
         existing.setLatitude(trip.getLatitude());
         existing.setLongitude(trip.getLongitude());
+        existing.setCountry(trip.getCountry());
 
         tripService.save(existing);
         ra.addFlashAttribute("success", "Voyage mis à jour !");
