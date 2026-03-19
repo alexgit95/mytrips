@@ -39,9 +39,7 @@
             <th:block th:each="trip, iterStat : ${yearEntry.value}">
                 <div th:with="spent=${spentMap[trip.id]},
                               remaining=${trip.budget.subtract(spentMap[trip.id])},
-                              pct=${trip.budget.doubleValue() > 0 ? spentMap[trip.id].doubleValue() / trip.budget.doubleValue() * 100 : 0},
-                              side=${iterStat.index % 2 == 0 ? 'left' : 'right'}"
-                     th:classappend="${side}"
+                              pct=${trip.budget.doubleValue() > 0 ? spentMap[trip.id].doubleValue() / trip.budget.doubleValue() * 100 : 0}"
                      class="timeline-entry">
 
                 <div class="timeline-dot"></div>

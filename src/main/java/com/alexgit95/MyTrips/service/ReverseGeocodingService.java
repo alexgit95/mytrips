@@ -145,7 +145,62 @@ public class ReverseGeocodingService {
     // Classes internes pour JSON mapping
     // =========================================================================
 
+    // =========================================================================
+    // Résultat combiné adresse + nom POI
+    // =========================================================================
+
+    public static class ReverseGeocodeResult {
+        public final String address;
+        public final String poiName;
+        public ReverseGeocodeResult(String address, String poiName) {
+            this.address = address;
+            this.poiName = poiName;
+        }
+    }
+
+    /**
+     * Retourne à la fois l'adresse et le nom du POI le plus proche.
+     */
+    public ReverseGeocodeResult reverseGeocodeWithPoi(Double latitude, Double longitude) {
+        if (!enabled || latitude == null || longitude == null) return null;
+        try {
+            NominatimResponse response = restClient.get()
+                    .uri(uriBuilder -> uriBuilder
+                            .path("/reverse")
+                            .queryParam("format", "json")
+                            .queryParam("lat", latitude)
+                            .queryParam("lon", longitude)
+                            .queryParam("zoom", "18")
+                            .build())
+                    .retrieve()
+                    .body(NominatimResponse.class);
+
+            if (response != null) {
+                String address = response.address != null ? formatAddress(response.address) : null;
+                String poiName = extractPoiName(response);
+                return new ReverseGeocodeResult(address, poiName);
+            }
+        } catch (RestClientException e) {
+            log.warn("Erreur géocodage avec POI (lat={}, lon={}): {}", latitude, longitude, e.getMessage());
+        } catch (Exception e) {
+            log.error("Erreur inattendue lors du géocodage avec POI:", e);
+        }
+        return null;
+    }
+
+    private String extractPoiName(NominatimResponse response) {
+        if (response.name != null && !response.name.isBlank()) return response.name;
+        if (response.address == null) return null;
+        if (response.address.amenity  != null) return response.address.amenity;
+        if (response.address.tourism  != null) return response.address.tourism;
+        if (response.address.leisure  != null) return response.address.leisure;
+        if (response.address.shop     != null) return response.address.shop;
+        if (response.address.historic != null) return response.address.historic;
+        return null;
+    }
+
     public static class NominatimResponse {
+        public String name;
         public Address address;
         public String display_name;
         public double lat;
@@ -157,6 +212,11 @@ public class ReverseGeocodingService {
         public String road;
         public String footway;
         public String pedestrian;
+        public String amenity;
+        public String tourism;
+        public String leisure;
+        public String shop;
+        public String historic;
         public String city;
         public String town;
         public String village;

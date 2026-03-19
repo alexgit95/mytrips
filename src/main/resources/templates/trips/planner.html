@@ -330,41 +330,72 @@
     const hereAndNowBtn = document.getElementById('hereAndNowBtn');
     if (hereAndNowBtn) {
         hereAndNowBtn.addEventListener('click', function() {
-            const eventName = prompt('Nom de l\'événement:');
-            if (!eventName || eventName.trim() === '') {
-                return;
-            }
 
-            // Récupérer la géolocalisation
+            // Récupérer la géolocalisation d'abord
             if (navigator.geolocation) {
                 hereAndNowBtn.disabled = true;
                 hereAndNowBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Localisation...';
 
                 navigator.geolocation.getCurrentPosition(
-                    function(position) {
-                        const latitude = position.coords.latitude;
+                    async function(position) {
+                        const latitude  = position.coords.latitude;
                         const longitude = position.coords.longitude;
-                        createHereAndNowEvent(eventName, latitude, longitude);
+                        const tripId    = window.location.pathname.split('/')[2];
+
+                        let suggestedName = '';
+                        let prefetchedAddress = '';
+
+                        // Appeler l'endpoint /geocode pour obtenir adresse + nom POI
+                        try {
+                            hereAndNowBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Recherche du lieu...';
+                            const resp = await fetch(`/trips/${tripId}/planner/geocode?lat=${latitude}&lon=${longitude}`, {
+                                headers: { 'X-CSRF-Token': document.querySelector('input[name="_csrf"]')?.value || '' }
+                            });
+                            if (resp.ok) {
+                                const geo = await resp.json();
+                                suggestedName     = geo.suggestedName || '';
+                                prefetchedAddress = geo.address       || '';
+                            }
+                        } catch (e) {
+                            console.warn('Erreur appel /geocode:', e);
+                        }
+
+                        hereAndNowBtn.disabled = false;
+                        hereAndNowBtn.innerHTML = '<i class="bi bi-geo-alt me-2"></i>Ici et maintenant';
+
+                        // Demander le nom en pré-remplissant avec le POI suggéré
+                        const eventName = prompt('Nom de l\'événement :', suggestedName);
+                        if (!eventName || eventName.trim() === '') return;
+
+                        createHereAndNowEvent(eventName, latitude, longitude, prefetchedAddress);
                     },
                     function(error) {
                         console.warn('Erreur de géolocalisation:', error);
+                        hereAndNowBtn.disabled = false;
+                        hereAndNowBtn.innerHTML = '<i class="bi bi-geo-alt me-2"></i>Ici et maintenant';
                         // Créer l'événement sans géolocalisation
-                        createHereAndNowEvent(eventName, null, null);
+                        const eventName = prompt('Nom de l\'événement :');
+                        if (!eventName || eventName.trim() === '') return;
+                        createHereAndNowEvent(eventName, null, null, '');
                     }
                 );
             } else {
                 // Créer l'événement sans géolocalisation si le navigateur ne supporte pas
-                createHereAndNowEvent(eventName, null, null);
+                const eventName = prompt('Nom de l\'événement :');
+                if (!eventName || eventName.trim() === '') return;
+                createHereAndNowEvent(eventName, null, null, '');
             }
         });
     }
 
-    function createHereAndNowEvent(name, latitude, longitude) {
+    function createHereAndNowEvent(name, latitude, longitude, prefetchedLocation) {
         const tripId = window.location.pathname.split('/')[2];
         const params = new URLSearchParams();
         params.append('name', name);
-        if (latitude !== null && longitude !== null) {
-            params.append('latitude', latitude);
+        if (prefetchedLocation) {
+            params.append('prefetchedLocation', prefetchedLocation);
+        } else if (latitude !== null && longitude !== null) {
+            params.append('latitude',  latitude);
             params.append('longitude', longitude);
         }
 

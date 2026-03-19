@@ -117,6 +117,31 @@ public class PlannerController {
     }
 
     // ---------------------------
+    // Suggestion adresse + nom POI (pour le bouton "Ici et maintenant")
+    // ---------------------------
+    @GetMapping("/geocode")
+    @ResponseBody
+    public ResponseEntity<Map<String, Object>> geocode(
+            @PathVariable Long tripId,
+            @RequestParam Double lat,
+            @RequestParam Double lon) {
+
+        Map<String, Object> result = new HashMap<>();
+        ReverseGeocodingService.ReverseGeocodeResult geo =
+                reverseGeocodingService.reverseGeocodeWithPoi(lat, lon);
+
+        if (geo != null) {
+            result.put("address",       geo.address  != null ? geo.address  : "");
+            result.put("suggestedName", geo.poiName  != null ? geo.poiName  : "");
+        } else {
+            // Géocodage désactivé ou erreur : renvoyer les coordonnées comme adresse
+            result.put("address",       String.format("%.6f, %.6f", lat, lon));
+            result.put("suggestedName", "");
+        }
+        return ResponseEntity.ok(result);
+    }
+
+    // ---------------------------
     // Créer un événement "ici et maintenant"
     // ---------------------------
     @PostMapping("/events/here-and-now")
@@ -125,7 +150,8 @@ public class PlannerController {
             @PathVariable Long tripId,
             @RequestParam String name,
             @RequestParam(required = false) Double latitude,
-            @RequestParam(required = false) Double longitude) {
+            @RequestParam(required = false) Double longitude,
+            @RequestParam(required = false) String prefetchedLocation) {
 
         Trip trip = tripService.findById(tripId);
         Map<String, Object> response = new HashMap<>();
@@ -151,11 +177,12 @@ public class PlannerController {
 
         // Déterminer la localisation
         String location = null;
-        if (latitude != null && longitude != null) {
-            // Essayer le géocodage inverse si activé
+        if (prefetchedLocation != null && !prefetchedLocation.isBlank()) {
+            // Adresse déjà résolue côté client via /geocode (évite un double appel Nominatim)
+            location = prefetchedLocation.trim();
+        } else if (latitude != null && longitude != null) {
+            // Fallback : résoudre via géocodage inverse
             location = reverseGeocodingService.reverseGeocode(latitude, longitude);
-            
-            // Fallback sur les coordonnées GPS si le géocodage a échoué ou est désactivé
             if (location == null) {
                 location = String.format("%.6f, %.6f", latitude, longitude);
             }

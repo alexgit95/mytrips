@@ -133,25 +133,28 @@ footer {
     position: relative;
     padding: 0 0 2rem 0;
     transform: scaleY(-1);
+    max-width: 700px;
+    margin-left: auto;
+    margin-right: auto;
 }
 
-/* Central vertical line */
+/* Left vertical line */
 .timeline-wrapper::before {
     content: '';
     position: absolute;
-    left: 50%;
+    left: 24px;
     top: 0;
     bottom: 0;
     width: 3px;
     background: linear-gradient(to bottom, #0d6efd 0%, #dee2e6 100%);
-    transform: translateX(-50%);
     border-radius: 3px;
 }
 
 /* Year badge */
 .timeline-year {
     position: relative;
-    text-align: center;
+    text-align: left;
+    padding-left: 60px;
     margin: 2rem 0 1rem;
     z-index: 1;
     transform: scaleY(-1);
@@ -167,29 +170,22 @@ footer {
     box-shadow: 0 2px 8px rgba(13,110,253,0.35);
 }
 
-/* Entry */
+/* Entry — all cards to the right of the left line */
 .timeline-entry {
     position: relative;
-    width: 45%;
+    width: calc(100% - 70px);
+    max-width: 520px;
+    margin-left: 60px;
     margin-bottom: 2rem;
     z-index: 1;
     transform: scaleY(-1);
 }
 
-.timeline-entry.left {
-    left: 0;
-    margin-right: auto;
-}
-
-.timeline-entry.right {
-    left: 55%;
-    margin-left: auto;
-}
-
-/* Dot on the central line */
+/* Dot aligned with the left line */
 .timeline-dot {
     position: absolute;
     top: 1.2rem;
+    left: -25px;
     width: 14px;
     height: 14px;
     background: #0d6efd;
@@ -197,9 +193,6 @@ footer {
     border-radius: 50%;
     box-shadow: 0 0 0 2px #0d6efd;
 }
-
-.timeline-entry.left  .timeline-dot { right: -8.2%; }
-.timeline-entry.right .timeline-dot { left:  -8.2%; }
 
 /* Card */
 .timeline-card {
@@ -219,22 +212,13 @@ footer {
 
 /* End flag */
 .timeline-end {
-    text-align: center;
+    text-align: left;
+    padding-left: 46px;
     position: relative;
     z-index: 1;
     font-size: 1.5rem;
     margin-top: 1rem;
     transform: scaleY(-1);
-}
-
-/* Mobile: single column */
-@media (max-width: 768px) {
-    .timeline-wrapper::before { left: 18px; }
-    .timeline-entry { width: 85%; left: 40px !important; margin-left: 0; margin-right: 0; }
-    .timeline-entry.left  .timeline-dot,
-    .timeline-entry.right .timeline-dot { left: -28px; right: auto; }
-    .timeline-end { text-align: left; padding-left: 40px; }
-    .timeline-year { text-align: left; padding-left: 40px; }
 }
 
 /* Responsive adjustments */
