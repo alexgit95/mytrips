@@ -129,6 +129,15 @@ public class ExpenseService {
                 running += dailyBudget + futureEntered;
                 trendLine.set(i, running);
             }
+        } else if (lastActualIdx == -1 && (dailyBudget > 0 || hasFutureExpenses)) {
+            // Trip not started yet: project from 0 on the first day
+            double running = 0.0;
+            for (int i = 0; i < allDays.size(); i++) {
+                LocalDate day = allDays.get(i);
+                double plannedExpense = dailyExpense.getOrDefault(day, 0.0);
+                running += dailyBudget + plannedExpense;
+                trendLine.set(i, running);
+            }
         }
 
         // Pie data: sum by category
