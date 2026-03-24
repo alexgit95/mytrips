@@ -39,7 +39,9 @@
             <th:block th:each="trip, iterStat : ${yearEntry.value}">
                 <div th:with="spent=${spentMap[trip.id]},
                               remaining=${trip.budget.subtract(spentMap[trip.id])},
-                              pct=${trip.budget.doubleValue() > 0 ? spentMap[trip.id].doubleValue() / trip.budget.doubleValue() * 100 : 0}"
+                              pct=${trip.budget.doubleValue() > 0 ? spentMap[trip.id].doubleValue() / trip.budget.doubleValue() * 100 : 0},
+                              side=${iterStat.index % 2 == 0 ? 'left' : 'right'}"
+                     th:classappend="${side}"
                      class="timeline-entry">
 
                 <div class="timeline-dot"></div>
@@ -48,7 +50,7 @@
                     <!-- Image banner -->
                     <div th:if="${trip.imageUrl != null and !#strings.isEmpty(trip.imageUrl)}"
                          class="timeline-card-img"
-                         th:style="'background-image: url(' + ${trip.imageUrl} + ')'">
+                         th:style="'background-image: url(\'' + ${trip.imageUrl} + '\')'" >
                     </div>
                     <div class="card-body py-3 px-3">
                         <div class="d-flex justify-content-between align-items-start gap-2 mb-1">

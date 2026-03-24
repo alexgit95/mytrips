@@ -264,6 +264,21 @@
     // ---- LINE CHART ----
     const lineEl = document.getElementById('lineChart');
     if (lineEl && labels.length > 0) {
+        // On mobile, if all expenses are front-loaded the data range is narrow and
+        // beginAtZero would push the curve into a tiny strip near the top.
+        // In that case, start the Y-axis just below the lowest visible value.
+        const isMobile = window.innerWidth < 768;
+        const allNonNull = [...actual, ...budget, ...trend].filter(v => v != null && v > 0);
+        const dataMin = allNonNull.length > 0 ? Math.min(...allNonNull) : 0;
+        const dataMax = allNonNull.length > 0 ? Math.max(...allNonNull) : 0;
+        const useSmartMin = isMobile && dataMax > 0 && dataMin > dataMax * 0.3;
+        const yMin = useSmartMin
+            ? Math.max(0, dataMin - Math.max(1, Math.ceil((dataMax - dataMin) * 0.15)))
+            : 0;
+        const yScaleConfig = yMin > 0
+            ? { min: yMin, ticks: { callback: v => v + ' €' } }
+            : { beginAtZero: true, ticks: { callback: v => v + ' €' } };
+
         new Chart(lineEl, {
             type: 'line',
             data: {
@@ -313,10 +328,7 @@
                     }
                 },
                 scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { callback: v => v + ' €' }
-                    }
+                    y: yScaleConfig
                 }
             }
         });
