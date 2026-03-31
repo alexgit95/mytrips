@@ -23,7 +23,7 @@ COPY src ./src
 RUN ./mvnw package -DskipTests -B
 
 # --- Stage 2 : Runtime ---
-FROM eclipse-temurin:21-jre-alpine
+FROM gcr.io/distroless/java21-debian12:nonroot
 
 WORKDIR /app
 
