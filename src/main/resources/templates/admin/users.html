@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="fr"
+      th:replace="~{fragments/layout :: layout(pageTitle='Gestion des utilisateurs',
+                                               content=~{::content},
+                                               extraHead=~{},
+                                               extraScripts=~{})}">
+<head></head>
+<body>
+<th:block th:fragment="content">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/admin}">Administration</a></li>
+            <li class="breadcrumb-item active">Utilisateurs</li>
+        </ol>
+    </nav>
+
+    <h1 class="h3 mb-4"><i class="bi bi-people me-2 text-primary"></i>Gestion des utilisateurs</h1>
+
+    <!-- Mot de passe généré (affiché une seule fois après création) -->
+    <div th:if="${generatedPassword}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-key me-2"></i>
+        Utilisateur <strong th:text="${createdUsername}"></strong> créé avec succès !
+        <br/>
+        <span class="fw-bold">Mot de passe généré :</span>
+        <code class="fs-5 user-select-all" th:text="${generatedPassword}"></code>
+        <br/>
+        <small class="text-muted"><i class="bi bi-exclamation-triangle me-1"></i>Notez ce mot de passe, il ne sera plus affiché.</small>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Formulaire de création -->
+        <div class="col-md-4">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="bi bi-person-plus me-2"></i>Nouvel utilisateur</h6>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/admin/users}" method="post">
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                        <div class="mb-3">
+                            <label for="username" class="form-label fw-semibold">
+                                Nom d'utilisateur <span class="text-danger">*</span>
+                            </label>
+                            <input type="text" id="username" name="username" class="form-control"
+                                   required placeholder="Ex : jean.dupont" autocomplete="off"/>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="role" class="form-label fw-semibold">
+                                Rôle <span class="text-danger">*</span>
+                            </label>
+                            <select id="role" name="role" class="form-select" required>
+                                <option value="" disabled selected>Choisir un rôle…</option>
+                                <option value="ADMIN">🔑 Administrateur</option>
+                                <option value="REPORTER">📝 Reporter</option>
+                                <option value="GUEST">👁 Invité</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="card bg-light">
+                                <div class="card-body py-2 small">
+                                    <strong>🔑 Administrateur :</strong> Accès complet (CRUD voyages, dépenses, planner, admin)<br/>
+                                    <strong>📝 Reporter :</strong> Lecture seule + planner (ici et maintenant, commentaires)<br/>
+                                    <strong>👁 Invité :</strong> Lecture seule uniquement
+                                </div>
+                            </div>
+                        </div>
+
+                        <button type="submit" class="btn btn-primary w-100">
+                            <i class="bi bi-person-plus me-1"></i>Créer l'utilisateur
+                        </button>
+                        <small class="text-muted d-block mt-2">
+                            <i class="bi bi-info-circle me-1"></i>Le mot de passe sera généré automatiquement et affiché après la création.
+                        </small>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Liste des utilisateurs -->
+        <div class="col-md-8">
+            <div class="card shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="bi bi-people me-2 text-primary"></i>Utilisateurs</h6>
+                    <span class="badge bg-secondary" th:text="${#lists.size(users)} + ' utilisateur(s)'"></span>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover mb-0">
+                            <thead class="table-light">
+                            <tr>
+                                <th>Nom d'utilisateur</th>
+                                <th>Rôle</th>
+                                <th class="text-center">Actions</th>
+                            </tr>
+                            </thead>
+                            <tbody>
+                            <tr th:each="user : ${users}">
+                                <td>
+                                    <i class="bi bi-person me-1"></i>
+                                    <span th:text="${user.username}">username</span>
+                                </td>
+                                <td>
+                                    <span class="badge"
+                                          th:classappend="${user.role == 'ADMIN'} ? 'bg-danger' : (${user.role == 'REPORTER'} ? 'bg-warning text-dark' : 'bg-secondary')"
+                                          th:text="${user.role == 'ADMIN'} ? '🔑 Administrateur' : (${user.role == 'REPORTER'} ? '📝 Reporter' : '👁 Invité')">
+                                    </span>
+                                </td>
+                                <td class="text-center">
+                                    <form th:action="@{/admin/users/{id}/delete(id=${user.id})}"
+                                          method="post" class="d-inline"
+                                          onsubmit="return confirm('Supprimer cet utilisateur ?')">
+                                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"
+                                                title="Supprimer">
+                                            <i class="bi bi-trash"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                            </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</th:block>
+</body>
+</html>

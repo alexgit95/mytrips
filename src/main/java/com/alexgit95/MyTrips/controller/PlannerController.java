@@ -8,6 +8,7 @@ import com.alexgit95.MyTrips.service.TripService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
@@ -46,6 +47,7 @@ public class PlannerController {
     // ---------------------------
     // Création d'un événement
     // ---------------------------
+    @PreAuthorize("hasAnyRole('ADMIN', 'REPORTER')")
     @PostMapping("/events")
     public String create(@PathVariable Long tripId,
                          @Valid @ModelAttribute("newEvent") PlannerEvent event,
@@ -66,6 +68,7 @@ public class PlannerController {
     // ---------------------------
     // Formulaire d'édition (GET)
     // ---------------------------
+    @PreAuthorize("hasAnyRole('ADMIN', 'REPORTER')")
     @GetMapping("/events/{eventId}/edit")
     public String editForm(@PathVariable Long tripId,
                            @PathVariable Long eventId,
@@ -85,6 +88,7 @@ public class PlannerController {
     // ---------------------------
     // Sauvegarde modification
     // ---------------------------
+    @PreAuthorize("hasAnyRole('ADMIN', 'REPORTER')")
     @PostMapping("/events/{eventId}")
     public String update(@PathVariable Long tripId,
                          @PathVariable Long eventId,
@@ -107,6 +111,7 @@ public class PlannerController {
     // ---------------------------
     // Suppression
     // ---------------------------
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/events/{eventId}/delete")
     public String delete(@PathVariable Long tripId,
                          @PathVariable Long eventId,
@@ -117,8 +122,25 @@ public class PlannerController {
     }
 
     // ---------------------------
+    // Mise à jour du commentaire uniquement (ADMIN et REPORTER)
+    // ---------------------------
+    @PreAuthorize("hasAnyRole('ADMIN', 'REPORTER')")
+    @PostMapping("/events/{eventId}/comment")
+    public String updateComment(@PathVariable Long tripId,
+                                @PathVariable Long eventId,
+                                @RequestParam String comment,
+                                RedirectAttributes ra) {
+        PlannerEvent event = plannerEventService.findById(eventId);
+        event.setComment(comment);
+        plannerEventService.save(event);
+        ra.addFlashAttribute("success", "Commentaire mis à jour !");
+        return "redirect:/trips/" + tripId + "/planner";
+    }
+
+    // ---------------------------
     // Suggestion adresse + nom POI (pour le bouton "Ici et maintenant")
     // ---------------------------
+    @PreAuthorize("hasAnyRole('ADMIN', 'REPORTER')")
     @GetMapping("/geocode")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> geocode(
@@ -144,6 +166,7 @@ public class PlannerController {
     // ---------------------------
     // Créer un événement "ici et maintenant"
     // ---------------------------
+    @PreAuthorize("hasAnyRole('ADMIN', 'REPORTER')")
     @PostMapping("/events/here-and-now")
     @ResponseBody
     public ResponseEntity<Map<String, Object>> createHereAndNow(

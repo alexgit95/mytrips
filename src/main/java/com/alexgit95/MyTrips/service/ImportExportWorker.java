@@ -5,10 +5,13 @@ import com.alexgit95.MyTrips.dto.ExportDto;
 import com.alexgit95.MyTrips.dto.ExpenseExportDto;
 import com.alexgit95.MyTrips.dto.PlannerEventExportDto;
 import com.alexgit95.MyTrips.dto.TripExportDto;
+import com.alexgit95.MyTrips.dto.UserExportDto;
 import com.alexgit95.MyTrips.model.CategoryEntity;
 import com.alexgit95.MyTrips.model.Expense;
+import com.alexgit95.MyTrips.model.AppUser;
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
+import com.alexgit95.MyTrips.repository.AppUserRepository;
 import com.alexgit95.MyTrips.repository.CategoryRepository;
 import com.alexgit95.MyTrips.repository.ExpenseRepository;
 import com.alexgit95.MyTrips.repository.PlannerEventRepository;
@@ -38,6 +41,7 @@ public class ImportExportWorker {
     private final TripRepository tripRepository;
     private final ExpenseRepository expenseRepository;
     private final PlannerEventRepository plannerEventRepository;
+    private final AppUserRepository appUserRepository;
     private final CategoryService categoryService;
     private final ObjectMapper objectMapper;
 
@@ -57,10 +61,12 @@ public class ImportExportWorker {
             List<Trip> trips = tripRepository.findAll();
             List<Expense> expenses = expenseRepository.findAll();
             List<PlannerEvent> plannerEvents = plannerEventRepository.findAll();
+            List<AppUser> users = appUserRepository.findAll();
             System.out.println("[EXPORT] Catégories custom trouvées : " + customCategories.size());
             System.out.println("[EXPORT] Voyages trouvés : " + trips.size());
             System.out.println("[EXPORT] Dépenses trouvées : " + expenses.size());
             System.out.println("[EXPORT] Événements planner trouvés : " + plannerEvents.size());
+            System.out.println("[EXPORT] Utilisateurs trouvés : " + users.size());
 
             List<CategoryExportDto> categoryDtos = customCategories.stream()
                     .map(c -> CategoryExportDto.builder()
@@ -100,12 +106,22 @@ public class ImportExportWorker {
                             .build())
                     .toList();
 
+            List<UserExportDto> userDtos = users.stream()
+                    .map(u -> UserExportDto.builder()
+                            .id(u.getId())
+                            .username(u.getUsername())
+                            .password(u.getPassword())
+                            .role(u.getRole())
+                            .build())
+                    .toList();
+
             System.out.println("[EXPORT] Sérialisation des DTOs...");
             ExportDto exportData = ExportDto.builder()
                     .categories(categoryDtos)
                     .trips(tripDtos)
                     .expenses(expenseDtos)
                     .plannerEvents(plannerEventDtos)
+                    .users(userDtos)
                     .build();
 
             objectMapper.writerWithDefaultPrettyPrinter()
@@ -128,6 +144,12 @@ public class ImportExportWorker {
             ExportDto data = objectMapper.readValue(in, ExportDto.class);
             System.out.println("[IMPORT] Données JSON lues avec succès");
 
+            List<CategoryExportDto> categories = data.getCategories() != null ? data.getCategories() : List.of();
+            List<TripExportDto> trips = data.getTrips() != null ? data.getTrips() : List.of();
+            List<ExpenseExportDto> expenses = data.getExpenses() != null ? data.getExpenses() : List.of();
+            List<PlannerEventExportDto> plannerEvents = data.getPlannerEvents() != null ? data.getPlannerEvents() : List.of();
+            List<UserExportDto> users = data.getUsers() != null ? data.getUsers() : List.of();
+
             // Suppression UNIQUEMENT des dépenses, événements planner et voyages (pas les catégories)
             System.out.println("[IMPORT] Suppression des données existantes...");
             plannerEventRepository.deleteAll();
@@ -139,8 +161,8 @@ public class ImportExportWorker {
             System.out.println("[IMPORT] Importation des catégories...");
             Map<String, CategoryEntity> categoryByName = new HashMap<>();
 
-            if (data.getCategories() != null && !data.getCategories().isEmpty()) {
-                for (CategoryExportDto catDto : data.getCategories()) {
+            if (!categories.isEmpty()) {
+                for (CategoryExportDto catDto : categories) {
                     try {
                         // Chercher d'abord si la catégorie existe
                         CategoryEntity existing = categoryService.findByName(catDto.getName());
@@ -173,7 +195,7 @@ public class ImportExportWorker {
             System.out.println("[IMPORT] Importation des voyages...");
             Map<Long, Trip> tripById = new HashMap<>();
             try {
-                for (TripExportDto dto : data.getTrips()) {
+                for (TripExportDto dto : trips) {
                     try {
                         Trip saved = tripRepository.save(Trip.builder()
                                 .name(dto.getName()).startDate(dto.getStartDate())
@@ -205,7 +227,7 @@ public class ImportExportWorker {
             int dépensesErreur = 0;
 
             try {
-                for (ExpenseExportDto dto : data.getExpenses()) {
+                for (ExpenseExportDto dto : expenses) {
                     Trip trip = tripById.get(dto.getTripId());
                     if (trip == null) {
                         System.err.println("[IMPORT] Voyage non trouvé pour l'expense (tripId: " + dto.getTripId() + ")");
@@ -250,11 +272,11 @@ public class ImportExportWorker {
 
             // ===== ÉTAPE 4 : Créer les événements planner =====
             System.out.println("[IMPORT] Importation des événements planner...");
-            if (data.getPlannerEvents() != null && !data.getPlannerEvents().isEmpty()) {
+            if (!plannerEvents.isEmpty()) {
                 List<PlannerEvent> plannerEventsToSave = new ArrayList<>();
                 int plannerOk = 0;
                 int plannerErreur = 0;
-                for (PlannerEventExportDto dto : data.getPlannerEvents()) {
+                for (PlannerEventExportDto dto : plannerEvents) {
                     Trip trip = tripById.get(dto.getTripId());
                     if (trip == null) {
                         System.err.println("[IMPORT] Voyage non trouvé pour l'événement planner (tripId: " + dto.getTripId() + ")");
@@ -275,6 +297,33 @@ public class ImportExportWorker {
                 System.out.println("[IMPORT] Événements planner importés (OK: " + plannerOk + ", Erreurs: " + plannerErreur + ")");
             } else {
                 System.out.println("[IMPORT] Aucun événement planner à importer.");
+            }
+
+            // ===== ÉTAPE 5 : Importer les utilisateurs =====
+            System.out.println("[IMPORT] Importation des utilisateurs...");
+            if (!users.isEmpty()) {
+                // Supprimer tous les utilisateurs existants et les remplacer
+                appUserRepository.deleteAll();
+                appUserRepository.flush();
+                int usersOk = 0;
+                for (UserExportDto dto : users) {
+                    try {
+                        AppUser user = AppUser.builder()
+                                .username(dto.getUsername())
+                                .password(dto.getPassword()) // BCrypt hash restauré tel quel
+                                .role(dto.getRole())
+                                .build();
+                        appUserRepository.save(user);
+                        usersOk++;
+                        System.out.println("[IMPORT] Utilisateur importé : " + dto.getUsername() + " (" + dto.getRole() + ")");
+                    } catch (Exception ex) {
+                        System.err.println("[IMPORT] Erreur lors de l'import de l'utilisateur " + dto.getUsername() + " : " + ex.getMessage());
+                    }
+                }
+                appUserRepository.flush();
+                System.out.println("[IMPORT] Utilisateurs importés : " + usersOk);
+            } else {
+                System.out.println("[IMPORT] Aucun utilisateur à importer.");
             }
 
             System.out.println("[IMPORT] Import terminé avec succès !");

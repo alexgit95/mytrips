@@ -43,6 +43,11 @@ services:
       APP_REMEMBER_ME_KEY: une_cle_secrete_longue_et_aleatoire
       GEO_API_ENABLED: "false"
       GEOCODING_ENABLED: "false"
+      APP_LOGIN_LOCK_MAX_FAILURES: "5"
+      APP_LOGIN_LOCK_MINUTES: "15"
+      APP_API_EXPORT_RATE_LIMIT_ENABLED: "true"
+      APP_API_EXPORT_RATE_LIMIT_MAX_REQUESTS: "30"
+      APP_API_EXPORT_RATE_LIMIT_WINDOW_SECONDS: "60"
     depends_on:
       db:
         condition: service_healthy
@@ -76,11 +81,16 @@ volumes:
 | `SPRING_PROFILES_ACTIVE` | ✅ | — | Doit valoir `docker` pour activer PostgreSQL |
 | `POSTGRES_USER` | ✅ | `mytrips` | Utilisateur PostgreSQL (même valeur dans `app` et `db`) |
 | `POSTGRES_PASSWORD` | ✅ | `mytrips_secret` | Mot de passe PostgreSQL — **à changer en production** |
-| `APP_USERNAME` | ✅ | `admin` | Identifiant de connexion à l'application |
-| `APP_PASSWORD` | ✅ | `admin` | Mot de passe de connexion — **à changer en production** |
+| `APP_USERNAME` | ✅ | `admin` | Identifiant de connexion de l'administrateur initial |
+| `APP_PASSWORD` | ✅ | `admin` | Mot de passe de l'administrateur initial — **à changer en production** |
 | `APP_REMEMBER_ME_KEY` | ✅ | *(valeur par défaut non sécurisée)* | Clé de signature des cookies "Se souvenir de moi" — **générer une chaîne aléatoire longue** |
 | `GEO_API_ENABLED` | ❌ | `false` | `true` = active l'API BigDataCloud pour la résolution géographique (page Monde) ; `false` = résolution locale hors-ligne |
 | `GEOCODING_ENABLED` | ❌ | `false` | `true` = active l'API Nominatim (OpenStreetMap) pour convertir les coordonnées GPS en adresses dans le planner « ici et maintenant » ; `false` = stocke juste les coordonnées GPS |
+| `APP_LOGIN_LOCK_MAX_FAILURES` | ❌ | `5` | Nombre d'échecs de connexion consécutifs avant verrouillage temporaire du compte |
+| `APP_LOGIN_LOCK_MINUTES` | ❌ | `15` | Durée du verrouillage temporaire du compte (en minutes) après dépassement du seuil d'échecs |
+| `APP_API_EXPORT_RATE_LIMIT_ENABLED` | ❌ | `true` | Active (`true`) ou désactive (`false`) le rate limiter anti-bruteforce de `GET /api/admin/export` |
+| `APP_API_EXPORT_RATE_LIMIT_MAX_REQUESTS` | ❌ | `30` | Nombre maximal de requêtes autorisées dans la fenêtre temporelle pour `GET /api/admin/export` |
+| `APP_API_EXPORT_RATE_LIMIT_WINDOW_SECONDS` | ❌ | `60` | Durée de la fenêtre (en secondes) utilisée pour limiter les requêtes de `GET /api/admin/export` |
 
 > **Note :** Le schéma de la base de données est créé et mis à jour automatiquement au démarrage (`ddl-auto=update`). Aucun script SQL n'est nécessaire.
 
@@ -120,6 +130,8 @@ Un fichier `mytrips.db` (SQLite) est créé automatiquement dans le répertoire 
 |---|---|
 | Identifiant | `admin` |
 | Mot de passe | `admin` |
+
+Au premier démarrage, un utilisateur administrateur est créé automatiquement avec ces identifiants. D'autres utilisateurs peuvent ensuite être créés depuis la page **Administration > Gérer les utilisateurs**.
 
 Ces valeurs sont configurables dans `src/main/resources/application.properties` :
 
@@ -245,10 +257,55 @@ La résolution géographique fonctionne en deux modes configurables depuis l'adm
 
 ### Administration
 
-Accessible via le menu **Administration**, regroupe :
+Accessible via le menu **Administration** (visible uniquement pour les administrateurs), regroupe :
 
-- **Export JSON** : téléchargement de l'intégralité des données (voyages, dépenses, événements) au format JSON
-- **Import JSON** : rechargement complet depuis un fichier d'export (remplace toutes les données existantes)
+- **Export JSON** : téléchargement de l'intégralité des données (voyages, dépenses, événements, utilisateurs) au format JSON
+- **Export JSON via API key** : génération et gestion de clés API temporaires pour appeler `GET /api/admin/export` avec le query param `apiKey` (voir ci-dessous)
+- **Import JSON** : rechargement complet depuis un fichier d'export (remplace toutes les données existantes, y compris les utilisateurs)
 - **Import HopWallet** : import depuis un export CSV de l'application HopWallet (ajout aux données existantes)
 - **Catégories** : CRUD complet des catégories de dépenses (nom + icône emoji)
+- **Gestion des utilisateurs** : création et suppression d'utilisateurs avec attribution de rôles
 - **Résolution géographique** : bascule à chaud entre mode local et mode API BigDataCloud, sans redémarrage ; affiche le mode actuellement actif
+
+#### Export API key (automatisation)
+
+Depuis **Administration**, la section **API Keys** (repliable) permet de :
+
+- **Créer une clé** en lui donnant un **nom** (optionnel, ex. `Home Assistant`, `Backup script`) et une durée de validité (de 1 jour à 12 mois / 365 jours)
+- **Visualiser toutes les clés** dans un tableau : nom, statut (Active / Expirée / Révoquée) avec badge coloré, date d'expiration, **dernière utilisation avec succès** ; les lignes des clés expirées ou révoquées apparaissent en rouge
+- **Supprimer** une clé individuelle (bouton poubelle, confirmation requise)
+- **Révoquer toutes les clés actives** en une seule action
+
+La clé brute n'est affichée qu'une seule fois au moment de la génération — elle est stockée sous forme de hash SHA-256 en base de données. Une clé expirée, révoquée ou invalide renvoie `401 Unauthorized`. En cas de dépassement du rate limiter anti-bruteforce sur cet endpoint, l'API renvoie `429 Too Many Requests` (avec en-tête `Retry-After`).
+
+Exemple d'appel :
+
+```bash
+curl "http://localhost:8080/api/admin/export?apiKey=mtk_xxx" -o mytrips-export.json
+```
+
+### Gestion des utilisateurs et rôles
+
+L'application supporte trois niveaux de rôles avec des permissions différenciées :
+
+| Rôle | Description | Permissions |
+|---|---|---|
+| **🔑 Administrateur** | Accès complet | Toutes les fonctionnalités : CRUD voyages, dépenses, planner, catégories, gestion des utilisateurs, export/import |
+| **📝 Reporter** | Lecture + planner limité | Peut créer et modifier les événements du planner, utiliser « ici et maintenant », ajouter/modifier des commentaires. Lecture seule pour les autres données. Pas d'accès à l'administration |
+| **👁 Invité** | Lecture seule | Consultation de toutes les données (voyages, dépenses, planner, frise, carte du monde). Aucune modification possible. Pas d'accès à l'administration |
+
+#### Création d'un utilisateur
+
+Depuis **Administration > Gérer les utilisateurs**, l'administrateur peut :
+
+1. Saisir un **nom d'utilisateur**
+2. Choisir un **rôle** (Administrateur, Reporter ou Invité)
+3. Valider : un **mot de passe est généré automatiquement** et affiché une seule fois
+
+> **Important :** le mot de passe généré n'est affiché qu'au moment de la création. Il doit être noté et communiqué à l'utilisateur concerné.
+
+Au premier démarrage de l'application, un utilisateur administrateur est créé automatiquement avec les identifiants configurés dans les propriétés (`APP_USERNAME` / `APP_PASSWORD` ou `app.security.username` / `app.security.password`).
+
+#### Export / Import des utilisateurs
+
+Les utilisateurs et leurs rôles sont inclus dans l'export JSON. Lors d'un import, les utilisateurs sont restaurés avec leurs mots de passe hashés, permettant une restauration complète de l'application sur une nouvelle instance.

@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.validation.BindingResult;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
@@ -91,6 +92,7 @@ public class TripController {
     // ---------------------------
     // Formulaire de création
     // ---------------------------
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/new")
     public String newForm(Model model) {
         model.addAttribute("trip", new Trip());
@@ -101,6 +103,7 @@ public class TripController {
     // ---------------------------
     // Sauvegarde création
     // ---------------------------
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public String create(@Valid @ModelAttribute("trip") Trip trip,
                          BindingResult result,
@@ -118,6 +121,7 @@ public class TripController {
     // ---------------------------
     // Formulaire d'édition
     // ---------------------------
+    @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/{id}/edit")
     public String editForm(@PathVariable Long id, Model model) {
         model.addAttribute("trip", tripService.findById(id));
@@ -128,6 +132,7 @@ public class TripController {
     // ---------------------------
     // Sauvegarde modification
     // ---------------------------
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}")
     public String update(@PathVariable Long id,
                          @Valid @ModelAttribute("trip") Trip trip,
@@ -159,6 +164,7 @@ public class TripController {
     // ---------------------------
     // Suppression
     // ---------------------------
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping("/{id}/delete")
     public String delete(@PathVariable Long id, RedirectAttributes ra) {
         tripService.delete(id);

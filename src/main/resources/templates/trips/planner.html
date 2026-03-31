@@ -46,6 +46,22 @@
     transition: box-shadow .15s, transform .15s;
 }
 .event-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.1); transform: translateY(-1px); }
+
+/* ── Today highlight ──────────────────────────────────────── */
+.timeline-day-group--today .timeline-day-label {
+    color: var(--bs-warning);
+}
+.timeline-day-group--today .timeline-day-label::before {
+    background: var(--bs-warning);
+    width: 18px; height: 18px;
+    left: -1.75rem;
+    box-shadow: 0 0 0 3px rgba(255,193,7,.3);
+}
+.timeline-day-group--today .event-card {
+    border-left: 3px solid var(--bs-warning);
+    background-color: #fffdf0;
+}
+
 .event-card .event-time {
     font-size: .8rem;
     font-weight: 600;
@@ -105,18 +121,22 @@
 
                     <!-- Timeline -->
                     <div th:unless="${#maps.isEmpty(eventsByDay)}" class="planner-timeline">
-                        <div th:each="dayEntry : ${eventsByDay}" class="timeline-day-group">
+                        <div th:each="dayEntry : ${eventsByDay}"
+                             th:classappend="${dayEntry.key.equals(#temporals.createToday())} ? 'timeline-day-group--today' : ''"
+                             class="timeline-day-group">
 
                             <!-- Day label -->
-                            <div class="timeline-day-label"
-                                 th:text="${#temporals.format(dayEntry.key, 'EEEE d MMMM yyyy')}">
+                            <div class="timeline-day-label">
+                                <span th:if="${dayEntry.key.equals(#temporals.createToday())}" class="me-2">📍</span>
+                                <span th:text="${#temporals.format(dayEntry.key, 'EEEE d MMMM yyyy')}"></span>
+                                <span th:if="${dayEntry.key.equals(#temporals.createToday())}" class="badge bg-warning text-dark ms-2" style="font-size:.7rem;vertical-align:middle">Aujourd'hui</span>
                             </div>
 
                             <!-- Events for this day -->
                             <div th:each="event : ${dayEntry.value}" class="mb-2">
                                 <div class="card event-card"
                                      th:data-event-id="${event.id}"
-                                     onclick="openEditModal(this)">
+                                     th:onclick="${isAdmin} ? 'openEditModal(this)' : ''">
                                     <div class="card-body py-2 px-3">
                                         <div class="d-flex align-items-start gap-3">
                                             <span class="event-time mt-1"
@@ -144,13 +164,22 @@
                                                    onclick="event.stopPropagation()">
                                                     <i class="bi bi-map"></i>
                                                 </a>
-                                                <!-- Edit trigger -->
-                                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                                <!-- Comment button (ADMIN + REPORTER) -->
+                                                <button th:if="${canEditPlanner}"
+                                                        type="button" class="btn btn-sm btn-outline-info"
+                                                        title="Commenter"
+                                                        th:data-event-id="${event.id}"
+                                                        onclick="event.stopPropagation(); openCommentModal(this)">
+                                                    <i class="bi bi-chat-text"></i>
+                                                </button>
+                                                <!-- Edit trigger (ADMIN + REPORTER) -->
+                                                <button th:if="${canEditPlanner}" type="button" class="btn btn-sm btn-outline-primary"
                                                         title="Modifier" onclick="event.stopPropagation(); openEditModal(this.closest('.event-card'))">
                                                     <i class="bi bi-pencil"></i>
                                                 </button>
-                                                <!-- Delete -->
-                                                <form th:action="@{/trips/{tid}/planner/events/{eid}/delete(tid=${trip.id}, eid=${event.id})}"
+                                                <!-- Delete (ADMIN only) -->
+                                                <form th:if="${isAdmin}"
+                                                      th:action="@{/trips/{tid}/planner/events/{eid}/delete(tid=${trip.id}, eid=${event.id})}"
                                                       method="post" class="d-inline"
                                                       onsubmit="return confirm('Supprimer cet événement ?')"
                                                       onclick="event.stopPropagation()">
@@ -177,15 +206,15 @@
         ═══════════════════════════════════════════════════════ -->
         <div class="col-lg-4">
 
-            <!-- Formulaire Nouveau événement -->
-            <div class="card shadow-sm" id="createCard">
+            <!-- Formulaire Nouveau événement (ADMIN et REPORTER) -->
+            <div th:if="${canEditPlanner}" class="card shadow-sm" id="createCard">
                 <div class="card-header bg-primary text-white">
                     <h6 class="mb-0"><i class="bi bi-plus-circle me-2"></i>Nouvel événement</h6>
                 </div>
                 <div class="card-body">
                     <!-- Bouton "Ici et maintenant" - visible seulement si le voyage est en cours -->
                     <div th:if="${trip.ongoing}" class="mb-3">
-                        <button type="button" class="btn btn-success w-100" id="hereAndNowBtn">
+                        <button type="button" class="btn btn-success w-100" id="hereAndNowBtnAdmin">
                             <i class="bi bi-geo-alt me-2"></i>Ici et maintenant
                         </button>
                     </div>
@@ -237,9 +266,9 @@
     </div>
 
     <!-- ════════════════════════════════════════════════════
-         Modal — Modifier un événement
+         Modal — Modifier un événement (ADMIN et REPORTER)
     ═══════════════════════════════════════════════════════ -->
-    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+    <div th:if="${canEditPlanner}" class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header bg-primary text-white">
@@ -280,6 +309,38 @@
         </div>
     </div>
 
+    <!-- ════════════════════════════════════════════════════
+         Modal — Commenter un événement (ADMIN + REPORTER)
+    ═══════════════════════════════════════════════════════ -->
+    <div th:if="${canEditPlanner}" class="modal fade" id="commentModal" tabindex="-1" aria-labelledby="commentModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title" id="commentModalLabel">
+                        <i class="bi bi-chat-text me-2"></i>Commenter l'événement
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="commentForm" method="post" novalidate>
+                    <input type="hidden" name="_csrf" th:value="${_csrf.token}"/>
+                    <div class="modal-body">
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="commentText">Commentaire</label>
+                            <textarea id="commentText" name="comment" class="form-control" rows="4"
+                                      placeholder="Ajoutez un commentaire…"></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                        <button type="submit" class="btn btn-info text-white">
+                            <i class="bi bi-check-lg me-1"></i>Enregistrer le commentaire
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Hidden data for edit modal — serialised server-side events -->
     <div id="events-data" style="display:none">
         <span th:each="dayEntry : ${eventsByDay}">
@@ -289,7 +350,8 @@
                   th:data-datetime="${#temporals.format(event.eventDateTime, 'yyyy-MM-dd') + 'T' + #temporals.format(event.eventDateTime, 'HH:mm')}"
                   th:data-location="${event.location != null ? event.location : ''}"
                   th:data-comment="${event.comment != null ? event.comment : ''}"
-                  th:data-action="@{/trips/{tid}/planner/events/{eid}(tid=${trip.id}, eid=${event.id})}">
+                  th:data-action="@{/trips/{tid}/planner/events/{eid}(tid=${trip.id}, eid=${event.id})}"
+                  th:data-comment-action="@{/trips/{tid}/planner/events/{eid}/comment(tid=${trip.id}, eid=${event.id})}">
             </span>
         </span>
     </div>
@@ -307,85 +369,108 @@
             datetime: span.dataset.datetime,
             location: span.dataset.location,
             comment:  span.dataset.comment,
-            action:   span.dataset.action
+            action:   span.dataset.action,
+            commentAction: span.dataset.commentAction
         };
     });
 
     window.openEditModal = function (card) {
+        if (!card) return;
         const eventId = card.dataset.eventId;
         const data = eventsMap[eventId];
         if (!data) return;
+
+        const editForm = document.getElementById('editForm');
+        if (!editForm) return;
 
         document.getElementById('editName').value     = data.name;
         document.getElementById('editDateTime').value = data.datetime;
         document.getElementById('editLocation').value = data.location;
         document.getElementById('editComment').value  = data.comment;
-        document.getElementById('editForm').action    = data.action;
+        editForm.action = data.action;
 
         const modal = new bootstrap.Modal(document.getElementById('editModal'));
         modal.show();
     };
 
-    // Gestion du bouton "Ici et maintenant"
-    const hereAndNowBtn = document.getElementById('hereAndNowBtn');
+    window.openCommentModal = function (btn) {
+        const eventId = btn.dataset.eventId;
+        const data = eventsMap[eventId];
+        if (!data) return;
+
+        const commentForm = document.getElementById('commentForm');
+        if (!commentForm) return;
+
+        document.getElementById('commentText').value = data.comment;
+        commentForm.action = data.commentAction;
+
+        const modal = new bootstrap.Modal(document.getElementById('commentModal'));
+        modal.show();
+    };
+
+    // Gestion du bouton "Ici et maintenant" (fonctionne pour les deux IDs)
+    const hereAndNowBtn = document.getElementById('hereAndNowBtn') || document.getElementById('hereAndNowBtnAdmin');
     if (hereAndNowBtn) {
-        hereAndNowBtn.addEventListener('click', function() {
+        hereAndNowBtn.addEventListener('click', handleHereAndNow);
+    }
+    // Si les deux boutons existent (ne devrait pas arriver mais au cas où)
+    const hereAndNowBtnAdmin = document.getElementById('hereAndNowBtnAdmin');
+    if (hereAndNowBtnAdmin && hereAndNowBtnAdmin !== hereAndNowBtn) {
+        hereAndNowBtnAdmin.addEventListener('click', handleHereAndNow);
+    }
 
-            // Récupérer la géolocalisation d'abord
-            if (navigator.geolocation) {
-                hereAndNowBtn.disabled = true;
-                hereAndNowBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Localisation...';
+    function handleHereAndNow() {
+        const btn = this;
 
-                navigator.geolocation.getCurrentPosition(
-                    async function(position) {
-                        const latitude  = position.coords.latitude;
-                        const longitude = position.coords.longitude;
-                        const tripId    = window.location.pathname.split('/')[2];
+        if (navigator.geolocation) {
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Localisation...';
 
-                        let suggestedName = '';
-                        let prefetchedAddress = '';
+            navigator.geolocation.getCurrentPosition(
+                async function(position) {
+                    const latitude  = position.coords.latitude;
+                    const longitude = position.coords.longitude;
+                    const tripId    = window.location.pathname.split('/')[2];
 
-                        // Appeler l'endpoint /geocode pour obtenir adresse + nom POI
-                        try {
-                            hereAndNowBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Recherche du lieu...';
-                            const resp = await fetch(`/trips/${tripId}/planner/geocode?lat=${latitude}&lon=${longitude}`, {
-                                headers: { 'X-CSRF-Token': document.querySelector('input[name="_csrf"]')?.value || '' }
-                            });
-                            if (resp.ok) {
-                                const geo = await resp.json();
-                                suggestedName     = geo.suggestedName || '';
-                                prefetchedAddress = geo.address       || '';
-                            }
-                        } catch (e) {
-                            console.warn('Erreur appel /geocode:', e);
+                    let suggestedName = '';
+                    let prefetchedAddress = '';
+
+                    try {
+                        btn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Recherche du lieu...';
+                        const resp = await fetch(`/trips/${tripId}/planner/geocode?lat=${latitude}&lon=${longitude}`, {
+                            headers: { 'X-CSRF-Token': document.querySelector('input[name="_csrf"]')?.value || '' }
+                        });
+                        if (resp.ok) {
+                            const geo = await resp.json();
+                            suggestedName     = geo.suggestedName || '';
+                            prefetchedAddress = geo.address       || '';
                         }
-
-                        hereAndNowBtn.disabled = false;
-                        hereAndNowBtn.innerHTML = '<i class="bi bi-geo-alt me-2"></i>Ici et maintenant';
-
-                        // Demander le nom en pré-remplissant avec le POI suggéré
-                        const eventName = prompt('Nom de l\'événement :', suggestedName);
-                        if (!eventName || eventName.trim() === '') return;
-
-                        createHereAndNowEvent(eventName, latitude, longitude, prefetchedAddress);
-                    },
-                    function(error) {
-                        console.warn('Erreur de géolocalisation:', error);
-                        hereAndNowBtn.disabled = false;
-                        hereAndNowBtn.innerHTML = '<i class="bi bi-geo-alt me-2"></i>Ici et maintenant';
-                        // Créer l'événement sans géolocalisation
-                        const eventName = prompt('Nom de l\'événement :');
-                        if (!eventName || eventName.trim() === '') return;
-                        createHereAndNowEvent(eventName, null, null, '');
+                    } catch (e) {
+                        console.warn('Erreur appel /geocode:', e);
                     }
-                );
-            } else {
-                // Créer l'événement sans géolocalisation si le navigateur ne supporte pas
-                const eventName = prompt('Nom de l\'événement :');
-                if (!eventName || eventName.trim() === '') return;
-                createHereAndNowEvent(eventName, null, null, '');
-            }
-        });
+
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-geo-alt me-2"></i>Ici et maintenant';
+
+                    const eventName = prompt('Nom de l\'événement :', suggestedName);
+                    if (!eventName || eventName.trim() === '') return;
+
+                    createHereAndNowEvent(eventName, latitude, longitude, prefetchedAddress);
+                },
+                function(error) {
+                    console.warn('Erreur de géolocalisation:', error);
+                    btn.disabled = false;
+                    btn.innerHTML = '<i class="bi bi-geo-alt me-2"></i>Ici et maintenant';
+                    const eventName = prompt('Nom de l\'événement :');
+                    if (!eventName || eventName.trim() === '') return;
+                    createHereAndNowEvent(eventName, null, null, '');
+                }
+            );
+        } else {
+            const eventName = prompt('Nom de l\'événement :');
+            if (!eventName || eventName.trim() === '') return;
+            createHereAndNowEvent(eventName, null, null, '');
+        }
     }
 
     function createHereAndNowEvent(name, latitude, longitude, prefetchedLocation) {
@@ -414,15 +499,11 @@
                 window.location.reload();
             } else {
                 alert('Erreur: ' + data.message);
-                hereAndNowBtn.disabled = false;
-                hereAndNowBtn.innerHTML = '<i class="bi bi-geo-alt me-2"></i>Ici et maintenant';
             }
         })
         .catch(error => {
             console.error('Erreur:', error);
             alert('Une erreur est survenue');
-            hereAndNowBtn.disabled = false;
-            hereAndNowBtn.innerHTML = '<i class="bi bi-geo-alt me-2"></i>Ici et maintenant';
         });
     }
 })();

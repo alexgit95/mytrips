@@ -63,6 +63,12 @@
             <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
         </div>
 
+        <!-- Alerte verrouillage temporaire -->
+        <div th:if="${param.locked}" class="alert alert-warning alert-dismissible fade show py-2" role="alert">
+            <i class="bi bi-shield-lock me-1"></i> Compte temporairement verrouille pendant 15 minutes apres plusieurs echecs de connexion.
+            <button type="button" class="btn-close btn-sm" data-bs-dismiss="alert"></button>
+        </div>
+
         <!-- Formulaire -->
         <form th:action="@{/login}" method="post">
 

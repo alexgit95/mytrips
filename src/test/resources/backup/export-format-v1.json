@@ -1,0 +1,58 @@
+{
+  "categories": [
+    {
+      "id": 1,
+      "name": "Transport",
+      "icon": "T",
+      "color": "#4e79a7",
+      "editable": true
+    }
+  ],
+  "trips": [
+    {
+      "id": 10,
+      "name": "Trip A",
+      "startDate": "2026-02-01",
+      "endDate": "2026-02-05",
+      "budget": 500,
+      "imageUrl": "https://example.com/a.jpg",
+      "dailyBudgetThreshold": 20,
+      "dailyExpenseBudget": 30,
+      "latitude": 48.8566,
+      "longitude": 2.3522
+    }
+  ],
+  "expenses": [
+    {
+      "id": 100,
+      "amount": 35.5,
+      "date": "2026-02-01",
+      "categoryName": "Transport",
+      "label": "Train",
+      "numberOfDays": 1,
+      "tripId": 10
+    }
+  ],
+  "plannerEvents": [
+    {
+      "id": 200,
+      "name": "Check-in",
+      "eventDateTime": "2026-02-01T18:30:00",
+      "location": "Paris",
+      "comment": "Late arrival",
+      "tripId": 10
+    }
+  ],
+  "users": [
+    {
+      "id": 300,
+      "username": "admin",
+      "password": "$2a$10$examplehash",
+      "role": "ADMIN"
+    }
+  ],
+  "legacyMetadata": {
+    "schemaVersion": 1,
+    "exportedAt": "2026-02-10T10:00:00"
+  }
+}

@@ -53,10 +53,10 @@
                         <a th:href="@{/trips/{id}/planner(id=${trip.id})}" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-calendar-week me-1"></i>Planner
                         </a>
-                        <a th:href="@{/trips/{id}/expenses/new(id=${trip.id})}" class="btn btn-success btn-sm">
+                        <a th:if="${isAdmin}" th:href="@{/trips/{id}/expenses/new(id=${trip.id})}" class="btn btn-success btn-sm">
                             <i class="bi bi-plus-lg me-1"></i>Ajouter une dépense
                         </a>
-                        <a th:href="@{/trips/{id}/edit(id=${trip.id})}" class="btn btn-outline-secondary btn-sm">
+                        <a th:if="${isAdmin}" th:href="@{/trips/{id}/edit(id=${trip.id})}" class="btn btn-outline-secondary btn-sm">
                             <i class="bi bi-pencil me-1"></i>Modifier
                         </a>
                     </div>
@@ -155,7 +155,7 @@
             <div th:if="${#lists.isEmpty(expenses)}" class="text-center py-5 text-muted">
                 <i class="bi bi-receipt display-3 mb-3 d-block"></i>
                 <p>Aucune dépense enregistrée pour ce voyage.</p>
-                <a th:href="@{/trips/{id}/expenses/new(id=${trip.id})}" class="btn btn-success">
+                <a th:if="${isAdmin}" th:href="@{/trips/{id}/expenses/new(id=${trip.id})}" class="btn btn-success">
                     <i class="bi bi-plus-lg me-1"></i>Ajouter une dépense
                 </a>
             </div>
@@ -169,7 +169,7 @@
                         <th>Libellé</th>
                         <th>Catégorie</th>
                         <th class="text-end">Montant</th>
-                        <th class="text-center">Actions</th>
+                        <th th:if="${isAdmin}" class="text-center">Actions</th>
                     </tr>
                     </thead>
                     <tbody>
@@ -185,7 +185,7 @@
                             </span>
                         </td>
                         <td class="text-end fw-semibold" th:text="${#numbers.formatDecimal(expense.amount, 1, 2)} + ' €'">0 €</td>
-                        <td class="text-center text-nowrap">
+                        <td th:if="${isAdmin}" class="text-center text-nowrap">
                             <a th:href="@{/trips/{tid}/expenses/{eid}/edit(tid=${trip.id}, eid=${expense.id})}"
                                class="btn btn-sm btn-outline-secondary me-1">
                                 <i class="bi bi-pencil"></i>
@@ -204,7 +204,7 @@
                     <tr>
                         <td colspan="3" class="fw-bold text-end">Total</td>
                         <td class="text-end fw-bold text-danger" th:text="${#numbers.formatDecimal(total, 1, 2)} + ' €'"></td>
-                        <td></td>
+                        <td th:if="${isAdmin}"></td>
                     </tr>
                     </tfoot>
                 </table>

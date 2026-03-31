@@ -3,12 +3,18 @@
       th:replace="~{fragments/layout :: layout(pageTitle='Administration',
                                                content=~{::content},
                                                extraHead=~{},
-                                               extraScripts=~{})}">
+                                               extraScripts=~{::extraScripts})}">
 <head></head>
 <body>
 <th:block th:fragment="content">
 
     <h1 class="h3 mb-4"><i class="bi bi-gear me-2 text-primary"></i>Administration</h1>
+
+    <div class="alert alert-light border d-inline-flex align-items-center py-2 px-3 mb-4" role="status">
+        <i class="bi bi-box-seam me-2 text-secondary"></i>
+        <span class="me-2 text-muted">Version déployée :</span>
+        <span class="badge text-bg-dark" th:text="${appVersion}">dev</span>
+    </div>
 
     <div class="row g-4">
 
@@ -98,6 +104,153 @@
                     <a th:href="@{/admin/categories}" class="btn btn-info w-100">
                         <i class="bi bi-pencil me-2"></i>Gérer les catégories
                     </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users card -->
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-header bg-dark text-white">
+                    <h5 class="mb-0"><i class="bi bi-people me-2"></i>Gérer les utilisateurs</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted">
+                        Créez des utilisateurs et attribuez-leur un rôle (administrateur, reporter ou invité).
+                    </p>
+                    <a th:href="@{/admin/users}" class="btn btn-dark w-100">
+                        <i class="bi bi-person-plus me-2"></i>Gérer les utilisateurs
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- API key card -->
+        <div class="col-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-secondary text-white d-flex align-items-center"
+                     style="cursor:pointer" data-bs-toggle="collapse" data-bs-target="#apiKeysSection"
+                     aria-expanded="false" aria-controls="apiKeysSection">
+                    <h5 class="mb-0 flex-grow-1"><i class="bi bi-key me-2"></i>API Keys — Export JSON</h5>
+                    <i class="bi bi-chevron-down ms-2"></i>
+                </div>
+                <div id="apiKeysSection" class="collapse">
+                    <div class="card-body">
+
+                        <div class="alert alert-info py-2 mb-3">
+                            <i class="bi bi-info-circle me-2"></i>
+                            Endpoint : <code>GET /api/admin/export</code>&nbsp;&nbsp;—&nbsp;&nbsp;
+                            Query param requis : <code>?apiKey=&lt;votre-cle&gt;</code>
+                        </div>
+
+                        <!-- Alerts -->
+                        <div th:if="${apiKeySuccess}" class="alert alert-success py-2 mb-3">
+                            <i class="bi bi-check-circle me-2"></i>
+                            <span th:text="${apiKeySuccess}"></span>
+                        </div>
+                        <div th:if="${success}" class="alert alert-success py-2 mb-3">
+                            <i class="bi bi-check-circle me-2"></i>
+                            <span th:text="${success}"></span>
+                        </div>
+                        <div th:if="${error}" class="alert alert-danger py-2 mb-3">
+                            <i class="bi bi-exclamation-triangle me-2"></i>
+                            <span th:text="${error}"></span>
+                        </div>
+
+                        <!-- Generated key display -->
+                        <div th:if="${generatedApiKey}" class="alert alert-warning mb-3">
+                            <p class="fw-semibold mb-1"><i class="bi bi-clipboard-check me-2"></i>Copiez cette clé — elle ne sera plus affichée :</p>
+                            <input type="text" class="form-control font-monospace mb-1" readonly th:value="${generatedApiKey}"/>
+                            <small class="text-muted">
+                                Expire le <span th:text="${generatedApiKeyExpiresAt}"></span>&nbsp;&nbsp;—&nbsp;&nbsp;
+                                Exemple : <code>/api/admin/export?apiKey=...</code>
+                            </small>
+                        </div>
+
+                        <!-- Generate form -->
+                        <h6 class="fw-semibold mb-2">Générer une nouvelle clé</h6>
+                        <form th:action="@{/admin/api-keys/generate}" method="post" class="row g-2 align-items-end mb-4">
+                            <div class="col-md-4">
+                                <label for="keyName" class="form-label">Nom de la clé <span class="text-muted">(optionnel)</span></label>
+                                <input type="text" id="keyName" name="keyName" class="form-control"
+                                       placeholder="ex. Home Assistant, Backup script…" maxlength="100"/>
+                            </div>
+                            <div class="col-md-4">
+                                <label for="validityDays" class="form-label fw-semibold">Durée de validité</label>
+                                <select id="validityDays" name="validityDays" class="form-select" required>
+                                    <option value="1">1 jour</option>
+                                    <option value="7" selected>7 jours</option>
+                                    <option value="30">30 jours</option>
+                                    <option value="90">90 jours</option>
+                                    <option value="180">6 mois (180 jours)</option>
+                                    <option value="365">12 mois (365 jours)</option>
+                                </select>
+                            </div>
+                            <div class="col-md-4">
+                                <button type="submit" class="btn btn-secondary w-100">
+                                    <i class="bi bi-key-fill me-2"></i>Générer
+                                </button>
+                            </div>
+                        </form>
+
+                        <!-- Keys table -->
+                        <h6 class="fw-semibold mb-2">Clés existantes</h6>
+                        <div th:if="${#lists.isEmpty(apiKeys)}" class="text-muted mb-3">Aucune clé API enregistrée.</div>
+                        <div th:unless="${#lists.isEmpty(apiKeys)}" class="table-responsive mb-3">
+                            <table class="table table-sm table-bordered align-middle">
+                                <thead class="table-dark">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Nom</th>
+                                        <th>Statut</th>
+                                        <th>Expiration</th>
+                                        <th>Dernière utilisation</th>
+                                        <th></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr th:each="k : ${apiKeys}"
+                                        th:classappend="${k.revoked or k.expiresAt.isBefore(#temporals.createNow())} ? 'table-danger' : ''">
+                                        <td th:text="${k.id}"></td>
+                                        <td>
+                                            <span th:if="${k.name != null and !#strings.isEmpty(k.name)}" th:text="${k.name}"></span>
+                                            <span th:unless="${k.name != null and !#strings.isEmpty(k.name)}" class="text-muted fst-italic">—</span>
+                                        </td>
+                                        <td>
+                                            <span th:if="${k.revoked}" class="badge bg-danger">Révoquée</span>
+                                            <span th:unless="${k.revoked}"
+                                                  th:classappend="${k.expiresAt.isBefore(#temporals.createNow())} ? 'bg-warning text-dark' : 'bg-success'"
+                                                  class="badge"
+                                                  th:text="${k.expiresAt.isBefore(#temporals.createNow())} ? 'Expirée' : 'Active'">
+                                            </span>
+                                        </td>
+                                        <td th:text="${#temporals.format(k.expiresAt, 'dd/MM/yyyy HH:mm')}"></td>
+                                        <td>
+                                            <span th:if="${k.lastUsedAt != null}" th:text="${#temporals.format(k.lastUsedAt, 'dd/MM/yyyy HH:mm')}"></span>
+                                            <span th:unless="${k.lastUsedAt != null}" class="text-muted fst-italic">Jamais</span>
+                                        </td>
+                                        <td>
+                                            <form th:action="@{/admin/api-keys/{id}/delete(id=${k.id})}" method="post"
+                                                  onsubmit="return confirm('Supprimer cette clé API ?')">
+                                                <button type="submit" class="btn btn-outline-danger btn-sm">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <!-- Revoke all -->
+                        <form th:action="@{/admin/api-keys/revoke-all}" method="post"
+                              onsubmit="return confirm('Révoquer toutes les clés API actives ? Cette action est irréversible.')">
+                            <button type="submit" class="btn btn-outline-danger">
+                                <i class="bi bi-shield-x me-2"></i>Révoquer toutes les clés actives
+                            </button>
+                        </form>
+
+                    </div>
                 </div>
             </div>
         </div>
@@ -202,6 +355,17 @@
 
     </div>
 
+</th:block>
+
+<th:block th:fragment="extraScripts">
+    <script th:if="${generatedApiKey or apiKeySuccess or success or error}" th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', function () {
+            var el = document.getElementById('apiKeysSection');
+            if (el) {
+                new bootstrap.Collapse(el, { toggle: false }).show();
+            }
+        });
+    </script>
 </th:block>
 </body>
 </html>
