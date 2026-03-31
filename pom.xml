@@ -131,35 +131,7 @@
 		</dependency>
 	</dependencies>
 
-	   <repositories>
-        <repository>
-            <id>cagip-maven-repository</id>
-            <url>https://registry.saas.cagip.group.gca/artifactory/maven-remote/</url>
-        </repository>
-        <repository>
-            <id>lcl-releases-hors-fwk</id>
-            <url>https://nexus.ul.lcl.group.gca/repository/lcl-releases-hors-fwk/</url>
-        </repository>
-        <repository>
-            <id>lcl-tech-librairies-nexus</id>
-            <url>https://nexus.ul.lcl.group.gca/repository/lcl-tech-librairies-repo/</url>
-        </repository>
-    </repositories>
 
-    <pluginRepositories>
-        <pluginRepository>
-            <id>maven-group</id>
-            <name>maven-group</name>
-            <url>https://registry.saas.cagip.group.gca/artifactory/maven-remote/
-            </url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-            <snapshots>
-                <enabled>true</enabled>
-            </snapshots>
-        </pluginRepository>
-    </pluginRepositories>
 
 
 
