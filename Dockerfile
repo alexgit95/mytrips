@@ -31,7 +31,7 @@ RUN java -Djarmode=tools -jar app.jar extract --layers --launcher --destination 
 # ─── Stage 3 : Image finale distroless ───────────
 # - Pas de shell, pas de package manager → surface d'attaque minimale
 # - :nonroot → process lancé en utilisateur uid=65532 sans root
-FROM gcr.io/distroless/java21-debian12:nonroot
+FROM --platform=linux/arm64 gcr.io/distroless/java21-debian12:nonroot
 
 WORKDIR /app
 
