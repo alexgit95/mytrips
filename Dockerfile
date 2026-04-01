@@ -4,7 +4,7 @@
 # =====================================================
 
 # ─── Stage 1 : Build ──────────────────────────────
-FROM --platform=linux/arm64 eclipse-temurin:21.0.10_7-jdk-alpine AS build
+FROM --platform=linux/arm64 eclipse-temurin:25.0.2_10-jdk-alpine AS build
 
 WORKDIR /app
 
@@ -21,7 +21,7 @@ COPY src ./src
 RUN ./mvnw package -DskipTests -B -q
 
 # ─── Stage 2 : Extraction des layers Spring Boot ──
-FROM --platform=linux/arm64 eclipse-temurin:21.0.10_7-jdk-alpine AS extractor
+FROM --platform=linux/arm64 eclipse-temurin:25.0.2_10-jdk-alpine AS extractor
 
 WORKDIR /app
 COPY --from=build /app/target/*.jar app.jar
@@ -30,7 +30,7 @@ RUN java -Djarmode=tools -jar app.jar extract --layers --launcher --destination 
 
 # ─── Stage 3 : Image finale ─────────────────────
 # eclipse-temurin:21-jre-jammy supporte nativement ARM64 (linux/arm64/v8)
-FROM --platform=linux/arm64 eclipse-temurin:21.0.10_7-jre-jammy
+FROM --platform=linux/arm64 eclipse-temurin:25.0.2_10-jre-jammy
 
 WORKDIR /app
 
