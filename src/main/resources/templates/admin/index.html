@@ -210,7 +210,7 @@
                                 </thead>
                                 <tbody>
                                     <tr th:each="k : ${apiKeys}"
-                                        th:classappend="${k.revoked or k.expiresAt.isBefore(#temporals.createNow())} ? 'table-danger' : ''">
+                                        th:classappend="${k.revoked or k.expiresAt.isBefore(T(java.time.LocalDateTime).now())} ? 'table-danger' : ''">
                                         <td th:text="${k.id}"></td>
                                         <td>
                                             <span th:if="${k.name != null and !#strings.isEmpty(k.name)}" th:text="${k.name}"></span>
@@ -219,9 +219,9 @@
                                         <td>
                                             <span th:if="${k.revoked}" class="badge bg-danger">Révoquée</span>
                                             <span th:unless="${k.revoked}"
-                                                  th:classappend="${k.expiresAt.isBefore(#temporals.createNow())} ? 'bg-warning text-dark' : 'bg-success'"
+                                                  th:classappend="${k.expiresAt.isBefore(T(java.time.LocalDateTime).now())} ? 'bg-warning text-dark' : 'bg-success'"
                                                   class="badge"
-                                                  th:text="${k.expiresAt.isBefore(#temporals.createNow())} ? 'Expirée' : 'Active'">
+                                                  th:text="${k.expiresAt.isBefore(T(java.time.LocalDateTime).now())} ? 'Expirée' : 'Active'">
                                             </span>
                                         </td>
                                         <td th:text="${#temporals.format(k.expiresAt, 'dd/MM/yyyy HH:mm')}"></td>
@@ -358,7 +358,7 @@
 </th:block>
 
 <th:block th:fragment="extraScripts">
-    <script th:if="${generatedApiKey or apiKeySuccess or success or error}" th:inline="javascript">
+    <script th:if="${generatedApiKey != null or apiKeySuccess != null or success != null or error != null}" th:inline="javascript">
         document.addEventListener('DOMContentLoaded', function () {
             var el = document.getElementById('apiKeysSection');
             if (el) {

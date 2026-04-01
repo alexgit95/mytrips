@@ -309,3 +309,5 @@ Au premier démarrage de l'application, un utilisateur administrateur est créé
 #### Export / Import des utilisateurs
 
 Les utilisateurs et leurs rôles sont inclus dans l'export JSON. Lors d'un import, les utilisateurs sont restaurés avec leurs mots de passe hashés, permettant une restauration complète de l'application sur une nouvelle instance.
+
+
