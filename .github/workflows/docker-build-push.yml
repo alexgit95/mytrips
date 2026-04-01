@@ -73,7 +73,7 @@ jobs:
 
       - name: Build and push – branch (tag = branch name)
         if: startsWith(github.ref, 'refs/heads/') && github.ref != 'refs/heads/master'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -82,7 +82,7 @@ jobs:
 
       - name: Build and push – master (tag = latest)
         if: github.ref == 'refs/heads/master'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
@@ -91,7 +91,7 @@ jobs:
 
       - name: Build and push – git tag (tag = version + latest)
         if: startsWith(github.ref, 'refs/tags/')
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: .
           push: true
