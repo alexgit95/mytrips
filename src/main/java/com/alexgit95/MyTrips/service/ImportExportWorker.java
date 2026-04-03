@@ -92,6 +92,7 @@ public class ImportExportWorker {
                             .id(e.getId()).amount(e.getAmount())
                             .date(e.getDate()).categoryName(e.getCategory().getName())
                             .label(e.getLabel()).numberOfDays(e.getNumberOfDays())
+                            .isPaid(e.getIsPaid())
                             .tripId(e.getTrip().getId())
                             .build())
                     .toList();
@@ -252,6 +253,7 @@ public class ImportExportWorker {
                                 .amount(dto.getAmount()).date(dto.getDate())
                                 .category(category).label(dto.getLabel())
                                 .numberOfDays(dto.getNumberOfDays() != null ? dto.getNumberOfDays() : 1)
+                                .isPaid(dto.getIsPaid() != null ? dto.getIsPaid() : false)
                                 .trip(trip).build());
                         dépensesOk++;
                     } catch (Exception ex) {
