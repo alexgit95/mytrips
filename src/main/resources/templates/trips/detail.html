@@ -173,7 +173,7 @@
                     </tr>
                     </thead>
                     <tbody>
-                    <tr th:each="expense : ${expenses}">
+                    <tr th:each="expense : ${expenses}" th:classappend="${isTripsOngoing && expense.isPaid != null && expense.isPaid ? 'table-success' : ''}">
                         <td class="text-nowrap" th:text="${#temporals.format(expense.date, 'dd/MM/yyyy')}">dd/mm/yyyy</td>
                         <td th:text="${expense.label}">Libellé</td>
                         <td>
@@ -204,6 +204,11 @@
                     <tr>
                         <td colspan="3" class="fw-bold text-end">Total</td>
                         <td class="text-end fw-bold text-danger" th:text="${#numbers.formatDecimal(total, 1, 2)} + ' €'"></td>
+                        <td th:if="${isAdmin}"></td>
+                    </tr>
+                    <tr th:if="${isTripsOngoing && totalPaid != null && totalPaid > 0}">
+                        <td colspan="3" class="fw-bold text-end">Total payé</td>
+                        <td class="text-end fw-bold text-success" th:text="${#numbers.formatDecimal(totalPaid, 1, 2)} + ' €'"></td>
                         <td th:if="${isAdmin}"></td>
                     </tr>
                     </tfoot>

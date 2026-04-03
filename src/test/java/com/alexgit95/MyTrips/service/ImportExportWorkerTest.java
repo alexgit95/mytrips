@@ -386,6 +386,138 @@ class ImportExportWorkerTest {
                 }));
     }
 
+    @Test
+    void exportAndImport_shouldPreserveIsPaidStatus() throws Exception {
+        // Given: Une dépense avec isPaid = true
+        CategoryEntity category = CategoryEntity.builder().id(1L).name("Transport").icon("T").color("#111").editable(true).build();
+        Trip trip = Trip.builder()
+                .id(10L)
+                .name("Paris")
+                .startDate(LocalDate.of(2026, 1, 1))
+                .endDate(LocalDate.of(2026, 1, 2))
+                .budget(BigDecimal.valueOf(100))
+                .build();
+
+        Expense expenseWithPaid = Expense.builder()
+                .id(20L)
+                .amount(BigDecimal.TEN)
+                .date(LocalDate.of(2026, 1, 1))
+                .category(category)
+                .label("Metro")
+                .numberOfDays(1)
+                .trip(trip)
+                .isPaid(true)
+                .build();
+
+        when(categoryRepository.findAll()).thenReturn(List.of(category));
+        when(tripRepository.findAll()).thenReturn(List.of(trip));
+        when(expenseRepository.findAll()).thenReturn(List.of(expenseWithPaid));
+        when(plannerEventRepository.findAll()).thenReturn(List.of());
+        when(appUserRepository.findAll()).thenReturn(List.of());
+
+        ObjectWriter writer = mock(ObjectWriter.class);
+        when(objectMapper.writerWithDefaultPrettyPrinter()).thenReturn(writer);
+
+        // When: Export
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        worker.exportToJson(out);
+
+        // Then: Vérifier que isPaid = true est présent dans l'export
+        ArgumentCaptor<ExportDto> exportCaptor = ArgumentCaptor.forClass(ExportDto.class);
+        verify(writer).writeValue(eq(out), exportCaptor.capture());
+        ExportDto exported = exportCaptor.getValue();
+
+        assertEquals(1, exported.getExpenses().size());
+        assertTrue(exported.getExpenses().get(0).getIsPaid());
+
+        // When: Import
+        ExportDto importDto = ExportDto.builder()
+                .categories(List.of(CategoryExportDto.builder().id(1L).name("Transport").icon("T").color("#111").editable(true).build()))
+                .trips(List.of(TripExportDto.builder()
+                        .id(10L)
+                        .name("Paris")
+                        .startDate(LocalDate.of(2026, 1, 1))
+                        .endDate(LocalDate.of(2026, 1, 2))
+                        .budget(BigDecimal.valueOf(100))
+                        .build()))
+                .expenses(List.of(ExpenseExportDto.builder()
+                        .id(20L)
+                        .amount(BigDecimal.TEN)
+                        .date(LocalDate.of(2026, 1, 1))
+                        .categoryName("Transport")
+                        .label("Metro")
+                        .numberOfDays(1)
+                        .isPaid(true)
+                        .tripId(10L)
+                        .build()))
+                .plannerEvents(List.of())
+                .users(List.of())
+                .build();
+
+        when(objectMapper.readValue(any(ByteArrayInputStream.class), eq(ExportDto.class))).thenReturn(importDto);
+        when(categoryService.findByName("Transport")).thenThrow(new EntityNotFoundException("missing"));
+
+        CategoryEntity createdCategory = CategoryEntity.builder().id(1L).name("Transport").icon("T").color("#111").editable(true).build();
+        when(categoryRepository.save(any(CategoryEntity.class))).thenReturn(createdCategory);
+
+        when(tripRepository.save(any(Trip.class))).thenAnswer(invocation -> {
+            Trip t = invocation.getArgument(0);
+            t.setId(999L);
+            return t;
+        });
+
+        worker.importFromJson(new ByteArrayInputStream("{}".getBytes()));
+
+        // Then: Vérifier que isPaid = true a été conservé lors de l'import
+        ArgumentCaptor<List<Expense>> importCaptor = ArgumentCaptor.forClass(List.class);
+        verify(expenseRepository).saveAll(importCaptor.capture());
+        assertEquals(1, importCaptor.getValue().size());
+        assertTrue(importCaptor.getValue().get(0).getIsPaid(), "isPaid should be preserved as true after import");
+    }
+
+    @Test
+    void importFromJson_shouldDefaultIsPaidToFalseForMissingValue() throws Exception {
+        // Given: une dépense sans isPaid dans l'export (rétrocompatibilité)
+        ExportDto importDto = ExportDto.builder()
+                .categories(List.of())
+                .trips(List.of(TripExportDto.builder()
+                        .id(10L)
+                        .name("Old Trip")
+                        .startDate(LocalDate.now())
+                        .endDate(LocalDate.now())
+                        .budget(BigDecimal.ONE)
+                        .build()))
+                .expenses(List.of(ExpenseExportDto.builder()
+                        .amount(BigDecimal.TEN)
+                        .date(LocalDate.now())
+                        .categoryName("Food")
+                        .label("Meal")
+                        .tripId(10L)
+                        // isPaid is not set (null)
+                        .build()))
+                .plannerEvents(List.of())
+                .users(List.of())
+                .build();
+
+        CategoryEntity category = CategoryEntity.builder().id(1L).name("Food").editable(true).build();
+
+        when(objectMapper.readValue(any(ByteArrayInputStream.class), eq(ExportDto.class))).thenReturn(importDto);
+        when(categoryService.findByName("Food")).thenReturn(category);
+        when(tripRepository.save(any(Trip.class))).thenAnswer(invocation -> {
+            Trip t = invocation.getArgument(0);
+            t.setId(777L);
+            return t;
+        });
+
+        worker.importFromJson(new ByteArrayInputStream("{}".getBytes()));
+
+        // Then: isPaid devrait être false par défaut
+        ArgumentCaptor<List<Expense>> captor = ArgumentCaptor.forClass(List.class);
+        verify(expenseRepository).saveAll(captor.capture());
+        assertEquals(1, captor.getValue().size());
+        assertFalse(captor.getValue().get(0).getIsPaid(), "isPaid should default to false when missing");
+    }
+
         private <T> List<T> toList(Iterable<T> iterable) {
                 List<T> list = new java.util.ArrayList<>();
                 for (T item : iterable) {

@@ -181,10 +181,19 @@ public class TripController {
         Trip trip = tripService.findById(id);
         List<Expense> expenses = expenseService.findByTrip(id);
         BigDecimal total = expenseService.totalByTrip(id);
+        
+        // Vérifier si le voyage est toujours en cours
+        java.time.LocalDate today = java.time.LocalDate.now();
+        boolean isTripsOngoing = today.isBefore(trip.getEndDate()) || today.isEqual(trip.getEndDate());
+        
+        // Total payé visible uniquement si le voyage est en cours
+        BigDecimal totalPaid = isTripsOngoing ? expenses.stream()
+                .filter(e -> e.getIsPaid() != null && e.getIsPaid())
+                .map(Expense::getAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add) : BigDecimal.ZERO;
         BigDecimal remaining = trip.getBudget().subtract(total);
 
         // Compute remaining days and budget per day remaining
-        java.time.LocalDate today = java.time.LocalDate.now();
         java.time.LocalDate from = today.isAfter(trip.getStartDate()) ? today : trip.getStartDate();
         long remainingDays = java.time.temporal.ChronoUnit.DAYS.between(from, trip.getEndDate()) + 1;
         if (remainingDays < 1) remainingDays = 1;
@@ -206,6 +215,8 @@ public class TripController {
         model.addAttribute("trip", trip);
         model.addAttribute("expenses", expenses);
         model.addAttribute("total", total);
+        model.addAttribute("totalPaid", totalPaid);
+        model.addAttribute("isTripsOngoing", isTripsOngoing);
         model.addAttribute("remaining", remaining);
         model.addAttribute("categories", categoryService.findAll());
 

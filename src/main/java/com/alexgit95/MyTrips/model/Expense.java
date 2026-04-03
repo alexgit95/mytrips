@@ -47,4 +47,8 @@ public class Expense {
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     private Trip trip;
+
+    @Column(nullable = false, columnDefinition = "BOOLEAN DEFAULT false")
+    @Builder.Default
+    private Boolean isPaid = false;
 }

@@ -20,4 +20,5 @@ public class ExpenseExportDto {
     private String label;
     private Integer numberOfDays;
     private Long tripId;
+    private Boolean isPaid;
 }

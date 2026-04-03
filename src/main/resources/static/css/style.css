@@ -227,3 +227,15 @@ footer {
         height: 150px;
     }
 }
+
+/* =============================================
+   Expenses – Paid row styling
+   ============================================= */
+.table tbody tr.table-success {
+    background-color: #e8f5e9 !important;
+    border-left: 4px solid #4caf50;
+}
+
+.table tbody tr.table-success:hover {
+    background-color: #c8e6c9 !important;
+}

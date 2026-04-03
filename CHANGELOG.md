@@ -7,6 +7,21 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.2.0] - 2026-04-03
+
+### Nouveautés
+
+#### Indicateur de statut de paiement des dépenses
+
+- Les dépenses peuvent désormais être marquées comme **"déjà payées"** via une case à cocher dans le formulaire de modification
+- **Coloration visuelle** : les lignes des dépenses payées sont surlignées en **vert clair** pour une identification rapide
+- Un **total payé** s'affiche en bas du tableau si des dépenses sont marquées comme payées
+- ⏳ **Affichage conditionnel** : la coloration des lignes et le total payé ne s'affichent que si le voyage est en cours (date actuelle ≤ date de fin). Une fois le voyage terminé, ces informations disparaissent
+- Le statut de paiement est **conservé** lors des opérations d'import/export
+- Impact limité au module dépenses : aucun changement sur les calculs de budget ou autres fonctionnalités
+
+---
+
 ## [2.1.0] — 2026-03-30
 
 ### Nouveautés
