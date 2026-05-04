@@ -1,13 +1,16 @@
 package com.alexgit95.MyTrips.service;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StreamUtils;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import java.nio.charset.StandardCharsets;
 
 /**
  * Forward geocoding service: converts address text to GPS coordinates.
@@ -26,6 +29,7 @@ public class ForwardGeocodingService {
     @Value("${GEOCODING_ENABLED:${app.geocoding.enabled:false}}")
     private boolean enabled;
 
+    private final ObjectMapper objectMapper = new ObjectMapper();
     private RestClient restClient;
 
     public ForwardGeocodingService() {
@@ -57,9 +61,9 @@ public class ForwardGeocodingService {
      * Geocode an address to coordinates.
      *
      * @param address The address text (e.g. "Zion National Park, UT")
-     * @return double[] with [latitude, longitude], or null if disabled or not found
+    * @return geocoding result with coordinates and display name, or null if disabled or not found
      */
-    public double[] geocode(String address) {
+    public GeocodingResult geocode(String address) {
         if (!enabled) {
             log.debug("Geocoding disabled, skipping: {}", address);
             return null;
@@ -70,14 +74,7 @@ public class ForwardGeocodingService {
         }
 
         try {
-            // Lazy init RestClient on first use
-            if (this.restClient == null) {
-                this.restClient = RestClient.builder()
-                        .baseUrl("https://nominatim.openstreetmap.org")
-                        .defaultHeader("User-Agent", "MyTrips-App")
-                        .defaultHeader("Accept", "application/json")
-                        .build();
-            }
+            ensureRestClientInitialized();
 
             log.debug("Geocoding address: {}", address);
 
@@ -88,15 +85,36 @@ public class ForwardGeocodingService {
                             .queryParam("format", "json")
                             .queryParam("limit", "1")
                             .build())
-                    .retrieve()
-                    .body(NominatimSearchResponse[].class);
+                    .exchange((request, response) -> {
+                        int statusCode = response.getStatusCode().value();
+                        String responseBody = StreamUtils.copyToString(response.getBody(), StandardCharsets.UTF_8);
+
+                        log.info("Nominatim response for '{}': status={} body={}", address, statusCode, responseBody);
+
+                        if (!response.getStatusCode().is2xxSuccessful()) {
+                            log.warn("Nominatim returned non-success status for '{}': status={} body={}",
+                                    address,
+                                    statusCode,
+                                    responseBody);
+                            return null;
+                        }
+
+                        if (responseBody == null || responseBody.isBlank()) {
+                            return null;
+                        }
+
+                        return objectMapper.readValue(responseBody, NominatimSearchResponse[].class);
+                    });
 
             if (results != null && results.length > 0) {
                 NominatimSearchResponse result = results[0];
                 if (result.lat != null && result.lon != null) {
-                    double[] coords = new double[]{result.lat, result.lon};
-                    log.debug("✓ Geocoded to: lat={}, lon={}", result.lat, result.lon);
-                    return coords;
+                    log.info("✓ Geocoded '{}' to lat={}, lon={} using display_name='{}'",
+                            address,
+                            result.lat,
+                            result.lon,
+                            result.display_name);
+                    return new GeocodingResult(result.lat, result.lon, result.display_name);
                 }
             }
 
@@ -112,6 +130,18 @@ public class ForwardGeocodingService {
         }
     }
 
+    private synchronized void ensureRestClientInitialized() {
+        if (this.restClient != null) {
+            return;
+        }
+
+        this.restClient = RestClient.builder()
+                .baseUrl("https://nominatim.openstreetmap.org")
+                .defaultHeader("User-Agent", "MyTrips-App")
+                .defaultHeader("Accept", "application/json")
+                .build();
+    }
+
     // =========================================================================
     // JSON response classes
     // =========================================================================
@@ -121,5 +151,8 @@ public class ForwardGeocodingService {
         public Double lat;
         public Double lon;
         public String display_name;
+    }
+
+    public record GeocodingResult(double latitude, double longitude, String displayName) {
     }
 }

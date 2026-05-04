@@ -116,13 +116,18 @@ public class PlannerGeocodingBatchService {
                     break;
                 }
 
-                double[] coords = forwardGeocodingService.geocode(location);
+                ForwardGeocodingService.GeocodingResult geocodingResult = forwardGeocodingService.geocode(location);
                 nextAllowedRequestAtMillis = currentTimeMillis() + NOMINATIM_MIN_DELAY_MS;
-                if (coords != null && coords.length >= 2) {
-                    event.setLatitude(coords[0]);
-                    event.setLongitude(coords[1]);
+                if (geocodingResult != null) {
+                    event.setLatitude(geocodingResult.latitude());
+                    event.setLongitude(geocodingResult.longitude());
                     plannerEventRepository.save(event);
-                    log.info("Geocoded event #{} '{}' -> lat={}, lon={}", event.getId(), location, coords[0], coords[1]);
+                    log.info("Geocoded event #{} '{}' -> lat={}, lon={}, display_name='{}'",
+                            event.getId(),
+                            location,
+                            geocodingResult.latitude(),
+                            geocodingResult.longitude(),
+                            geocodingResult.displayName());
                     geocodedInCurrentRun.incrementAndGet();
                 } else {
                     log.warn("Geocoding returned no result for event #{} location='{}'", event.getId(), location);
