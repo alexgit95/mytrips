@@ -120,6 +120,21 @@ public class AdminController {
         return "redirect:/admin";
     }
 
+    @PostMapping("/planner-geocoding/stop")
+    public String stopPlannerGeocodingBatch(RedirectAttributes ra) {
+        PlannerGeocodingBatchService.StopResult result = plannerGeocodingBatchService.stopManualBatch();
+
+        if (result == PlannerGeocodingBatchService.StopResult.NOT_RUNNING) {
+            ra.addFlashAttribute("geocodingBatchInfo",
+                    "Aucun traitement en cours a interrompre.");
+        } else {
+            ra.addFlashAttribute("geocodingBatchInfo",
+                    "Demande d'arret envoyee. Le traitement va s'interrompre.");
+        }
+
+        return "redirect:/admin";
+    }
+
     @PostMapping("/api-keys/generate")
     public String generateApiKey(@RequestParam("validityDays") int validityDays,
                                  @RequestParam(value = "keyName", required = false) String keyName,

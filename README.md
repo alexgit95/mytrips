@@ -85,7 +85,7 @@ volumes:
 | `APP_PASSWORD` | ✅ | `admin` | Mot de passe de l'administrateur initial — **à changer en production** |
 | `APP_REMEMBER_ME_KEY` | ✅ | *(valeur par défaut non sécurisée)* | Clé de signature des cookies "Se souvenir de moi" — **générer une chaîne aléatoire longue** |
 | `GEO_API_ENABLED` | ❌ | `false` | `true` = active l'API BigDataCloud pour la résolution géographique (page Monde) ; `false` = résolution locale hors-ligne |
-| `GEOCODING_ENABLED` | ❌ | `false` | `true` = active l'API Nominatim (OpenStreetMap) pour convertir les coordonnées GPS en adresses dans le planner « ici et maintenant » ; `false` = stocke juste les coordonnées GPS |
+| `GEOCODING_ENABLED` | ❌ | `false` | `true` = active l'API Nominatim (OpenStreetMap) pour le planner « ici et maintenant » et le géocodage manuel des événements planner depuis l'administration ; `false` = aucun appel Nominatim |
 | `APP_LOGIN_LOCK_MAX_FAILURES` | ❌ | `5` | Nombre d'échecs de connexion consécutifs avant verrouillage temporaire du compte |
 | `APP_LOGIN_LOCK_MINUTES` | ❌ | `15` | Durée du verrouillage temporaire du compte (en minutes) après dépassement du seuil d'échecs |
 | `APP_API_EXPORT_RATE_LIMIT_ENABLED` | ❌ | `true` | Active (`true`) ou désactive (`false`) le rate limiter anti-bruteforce de `GET /api/admin/export` |
@@ -257,9 +257,12 @@ Une **carte OpenStreetMap interactive** affiche vos voyages avec des marqueurs p
 
 La source géographique des marqueurs est déterminée selon ce qui est disponible pour chaque voyage et étape :
 
-1. **PlannerEvents avec localisation** → marqueurs d'étapes (📍) au centre du pays résolu
-2. **Voyage sans événements** + **coordonnées GPS** → marqueur au GPS exact (🚩)
-3. **Voyage sans événements** + **champ Pays** → marqueur au centre du pays (🚩)
+1. **PlannerEvents avec coordonnées persistées** (`latitude`/`longitude`) → marqueurs d'étapes (📍) au GPS exact
+2. **PlannerEvents sans coordonnées persistées** + **localisation texte** → fallback au centre du pays résolu
+3. **Voyage sans événements** + **coordonnées GPS** → marqueur au GPS exact (🚩)
+4. **Voyage sans événements** + **champ Pays** → marqueur au centre du pays (🚩)
+
+> Aucun appel Nominatim n'est effectué au chargement de la page Monde. La carte réutilise uniquement les coordonnées déjà persistées.
 
 #### Statistiques par continent
 
@@ -289,6 +292,7 @@ Accessible via le menu **Administration** (visible uniquement pour les administr
 - **Catégories** : CRUD complet des catégories de dépenses (nom + icône emoji)
 - **Gestion des utilisateurs** : création et suppression d'utilisateurs avec attribution de rôles
 - **Résolution géographique** : bascule à chaud entre mode local et mode API BigDataCloud, sans redémarrage ; affiche le mode actuellement actif
+- **Géocodage planner manuel** : lancement à la demande du géocodage des événements planner depuis l'IHM admin (uniquement si Nominatim est activé), avec suivi en direct des compteurs (déjà géocodés, restants, total, progression), bouton **Stop**, et horodatages de début/fin du dernier traitement
 
 #### Export API key (automatisation)
 

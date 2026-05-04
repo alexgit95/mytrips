@@ -16,11 +16,14 @@ import java.util.concurrent.atomic.AtomicLong;
 public class PlannerGeocodingBatchService {
 
     private static final Logger log = LoggerFactory.getLogger(PlannerGeocodingBatchService.class);
+    private static final long NOMINATIM_MIN_DELAY_MS = 1000L;
+    private static final long STOP_CHECK_INTERVAL_MS = 100L;
 
     private final PlannerEventRepository plannerEventRepository;
     private final ForwardGeocodingService forwardGeocodingService;
 
     private final AtomicBoolean running = new AtomicBoolean(false);
+    private final AtomicBoolean stopRequested = new AtomicBoolean(false);
     private final AtomicLong runTargetEvents = new AtomicLong(0);
     private final AtomicLong processedInCurrentRun = new AtomicLong(0);
     private final AtomicLong geocodedInCurrentRun = new AtomicLong(0);
@@ -46,6 +49,7 @@ public class PlannerGeocodingBatchService {
 
         List<PlannerEvent> candidates = plannerEventRepository.findAllNeedingGeocoding();
         runTargetEvents.set(candidates.size());
+        stopRequested.set(false);
         processedInCurrentRun.set(0);
         geocodedInCurrentRun.set(0);
         failedInCurrentRun.set(0);
@@ -57,6 +61,15 @@ public class PlannerGeocodingBatchService {
         return StartResult.STARTED;
     }
 
+    public StopResult stopManualBatch() {
+        if (!running.get()) {
+            return StopResult.NOT_RUNNING;
+        }
+        stopRequested.set(true);
+        lastMessage = "Arret demande, finalisation en cours";
+        return StopResult.STOP_REQUESTED;
+    }
+
     public Progress getProgress() {
         long totalEvents = plannerEventRepository.countEventsWithLocation();
         long geocodedEvents = plannerEventRepository.countEventsWithCoordinates();
@@ -64,6 +77,7 @@ public class PlannerGeocodingBatchService {
 
         return new Progress(
                 running.get(),
+                stopRequested.get(),
                 totalEvents,
                 geocodedEvents,
                 pendingEvents,
@@ -78,8 +92,14 @@ public class PlannerGeocodingBatchService {
     }
 
     private void runBatch(List<PlannerEvent> candidates) {
+        long nextAllowedRequestAtMillis = 0L;
+
         try {
             for (PlannerEvent event : candidates) {
+                if (stopRequested.get()) {
+                    lastMessage = "Traitement interrompu par l'utilisateur";
+                    break;
+                }
                 if (!forwardGeocodingService.isEnabled()) {
                     lastMessage = "Traitement interrompu: geocodage desactive";
                     break;
@@ -91,7 +111,13 @@ public class PlannerGeocodingBatchService {
                     continue;
                 }
 
+                if (!waitForRateLimit(nextAllowedRequestAtMillis)) {
+                    lastMessage = "Traitement interrompu par l'utilisateur";
+                    break;
+                }
+
                 double[] coords = forwardGeocodingService.geocode(location);
+                nextAllowedRequestAtMillis = currentTimeMillis() + NOMINATIM_MIN_DELAY_MS;
                 if (coords != null && coords.length >= 2) {
                     event.setLatitude(coords[0]);
                     event.setLongitude(coords[1]);
@@ -103,7 +129,7 @@ public class PlannerGeocodingBatchService {
                 processedInCurrentRun.incrementAndGet();
             }
 
-            if (forwardGeocodingService.isEnabled()) {
+            if (!stopRequested.get() && forwardGeocodingService.isEnabled()) {
                 lastMessage = "Traitement termine";
             }
         } catch (Exception e) {
@@ -111,8 +137,36 @@ public class PlannerGeocodingBatchService {
             log.error("Erreur pendant le batch manuel de geocodage planner", e);
         } finally {
             finishedAt = LocalDateTime.now();
+            stopRequested.set(false);
             running.set(false);
         }
+    }
+
+    boolean waitForRateLimit(long nextAllowedRequestAtMillis) {
+        while (!stopRequested.get()) {
+            long remainingMillis = nextAllowedRequestAtMillis - currentTimeMillis();
+            if (remainingMillis <= 0) {
+                return true;
+            }
+
+            long sleepMillis = Math.min(remainingMillis, STOP_CHECK_INTERVAL_MS);
+            try {
+                sleepMillis(sleepMillis);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                log.warn("Batch manuel interrompu pendant l'attente du rate limit Nominatim");
+                return false;
+            }
+        }
+        return false;
+    }
+
+    long currentTimeMillis() {
+        return System.currentTimeMillis();
+    }
+
+    void sleepMillis(long delayMillis) throws InterruptedException {
+        Thread.sleep(delayMillis);
     }
 
     public enum StartResult {
@@ -121,8 +175,14 @@ public class PlannerGeocodingBatchService {
         GEOCODING_DISABLED
     }
 
+    public enum StopResult {
+        STOP_REQUESTED,
+        NOT_RUNNING
+    }
+
     public static final class Progress {
         private final boolean running;
+        private final boolean stopRequested;
         private final long totalEvents;
         private final long geocodedEvents;
         private final long pendingEvents;
@@ -135,6 +195,7 @@ public class PlannerGeocodingBatchService {
         private final String lastMessage;
 
         public Progress(boolean running,
+                        boolean stopRequested,
                         long totalEvents,
                         long geocodedEvents,
                         long pendingEvents,
@@ -146,6 +207,7 @@ public class PlannerGeocodingBatchService {
                         LocalDateTime finishedAt,
                         String lastMessage) {
             this.running = running;
+            this.stopRequested = stopRequested;
             this.totalEvents = totalEvents;
             this.geocodedEvents = geocodedEvents;
             this.pendingEvents = pendingEvents;
@@ -159,6 +221,8 @@ public class PlannerGeocodingBatchService {
         }
 
         public boolean isRunning() { return running; }
+
+    public boolean isStopRequested() { return stopRequested; }
 
         public long getTotalEvents() { return totalEvents; }
 

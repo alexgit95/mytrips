@@ -420,15 +420,27 @@
                     <div class="small text-muted mb-3">
                         Dernier état : <span th:text="${geocodingBatchProgress.lastMessage}">-</span><br/>
                         Geocodes run courant : <strong th:text="${geocodingBatchProgress.geocodedInCurrentRun}">0</strong> ;
-                        Echecs run courant : <strong th:text="${geocodingBatchProgress.failedInCurrentRun}">0</strong>
+                        Echecs run courant : <strong th:text="${geocodingBatchProgress.failedInCurrentRun}">0</strong><br/>
+                        Début :
+                        <strong th:text="${geocodingBatchProgress.startedAt != null} ? ${#temporals.format(geocodingBatchProgress.startedAt, 'dd/MM/yyyy HH:mm:ss')} : '—'">—</strong>
+                        ; Fin :
+                        <strong th:text="${geocodingBatchProgress.finishedAt != null} ? ${#temporals.format(geocodingBatchProgress.finishedAt, 'dd/MM/yyyy HH:mm:ss')} : '—'">—</strong>
                     </div>
 
-                    <form th:action="@{/admin/planner-geocoding/start}" method="post" class="d-flex gap-2">
+                    <div class="d-flex gap-2">
+                        <form th:action="@{/admin/planner-geocoding/start}" method="post" class="w-100">
                         <button type="submit" class="btn btn-primary w-100"
                                 th:disabled="${geocodingBatchProgress.running or !geocodingEnabled}">
                             <i class="bi bi-play-circle me-2"></i>Lancer le géocodage planner
                         </button>
-                    </form>
+                        </form>
+                        <form th:action="@{/admin/planner-geocoding/stop}" method="post" class="w-100">
+                            <button type="submit" class="btn btn-outline-danger w-100"
+                                    th:disabled="${!geocodingBatchProgress.running or geocodingBatchProgress.stopRequested}">
+                                <i class="bi bi-stop-circle me-2"></i>Stop
+                            </button>
+                        </form>
+                    </div>
                     <small class="text-muted mt-1 d-block" th:if="${!geocodingEnabled}">
                         Activez d'abord le géocodage Nominatim pour lancer ce traitement.
                     </small>

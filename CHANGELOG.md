@@ -28,7 +28,12 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 - Performance : la carte se charge uniquement si au moins un marqueur est disponible
 - Performance géocodage : les coordonnées des étapes sont maintenant persistées sur chaque `PlannerEvent` après le premier géocodage, puis réutilisées aux chargements suivants (plus d'appel Nominatim systématique)
-- Administration : lancement manuel du géocodage des événements planner depuis l'IHM avec suivi d'avancement (déjà géocodés, restants, total, progression du run en cours)
+- Administration : suppression du géocodage Nominatim automatique au chargement de la carte Monde
+- Administration : lancement manuel du géocodage des événements planner depuis l'IHM, uniquement si le géocodage Nominatim est activé
+- Administration : suivi d'avancement en direct dans l'IHM (déjà géocodés, restants, total, progression du run courant, succès/échecs)
+- Administration : ajout d'un bouton **Stop** pour interrompre un traitement en cours
+- Administration : affichage des horodatages de début et de fin du dernier traitement
+- Administration : le traitement manuel de géocodage planner respecte la limite Nominatim gratuite avec **1 appel par seconde**, sans parallélisme sur les requêtes
 
 ---
 
