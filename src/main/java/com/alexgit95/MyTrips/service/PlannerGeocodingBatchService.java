@@ -122,8 +122,10 @@ public class PlannerGeocodingBatchService {
                     event.setLatitude(coords[0]);
                     event.setLongitude(coords[1]);
                     plannerEventRepository.save(event);
+                    log.info("Geocoded event #{} '{}' -> lat={}, lon={}", event.getId(), location, coords[0], coords[1]);
                     geocodedInCurrentRun.incrementAndGet();
                 } else {
+                    log.warn("Geocoding returned no result for event #{} location='{}'", event.getId(), location);
                     failedInCurrentRun.incrementAndGet();
                 }
                 processedInCurrentRun.incrementAndGet();

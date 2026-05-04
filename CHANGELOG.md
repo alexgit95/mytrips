@@ -7,7 +7,7 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
-## [Unreleased]
+## [2.4.0]
 
 ### Nouveautés
 

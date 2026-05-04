@@ -100,11 +100,11 @@ public class ForwardGeocodingService {
                 }
             }
 
-            log.debug("✗ No geocoding result for: {}", address);
+            log.warn("✗ No geocoding result for: {}", address);
             return null;
 
         } catch (RestClientException e) {
-            log.warn("Geocoding error for '{}': {}", address, e.getMessage());
+            log.warn("Geocoding HTTP error for '{}': {}", address, e.getMessage(), e);
             return null;
         } catch (Exception e) {
             log.error("Unexpected error during geocoding", e);
