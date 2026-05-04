@@ -378,6 +378,24 @@ public class GeoCountryResolver {
         return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 
+    /**
+     * Get the centroid (center) coordinates of a country by ISO code.
+     *
+     * @param isoCode the ISO 3166-1 alpha-2 country code (e.g., "FR", "US", "JP")
+     * @return an array [latitude, longitude] of the country's centroid, or null if not found
+     */
+    public static double[] getCountryCenter(String isoCode) {
+        if (isoCode == null || isoCode.isBlank()) {
+            return null;
+        }
+        for (CountryEntry entry : COUNTRIES) {
+            if (entry.iso().equalsIgnoreCase(isoCode)) {
+                return new double[]{entry.cLat(), entry.cLng()};
+            }
+        }
+        return null;
+    }
+
     // =========================================================================
     // Subdivision resolvers
     // =========================================================================

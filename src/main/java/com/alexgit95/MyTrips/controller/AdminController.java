@@ -5,6 +5,7 @@ import com.alexgit95.MyTrips.service.AppUserService;
 import com.alexgit95.MyTrips.service.ApiAccessKeyService;
 import com.alexgit95.MyTrips.service.CategoryService;
 import com.alexgit95.MyTrips.service.DataImportExportService;
+import com.alexgit95.MyTrips.service.ForwardGeocodingService;
 import com.alexgit95.MyTrips.service.GeoCountryResolver;
 import com.alexgit95.MyTrips.service.ReverseGeocodingService;
 import jakarta.servlet.http.HttpServletResponse;
@@ -32,6 +33,7 @@ public class AdminController {
 
     private final DataImportExportService dataService;
     private final CategoryService         categoryService;
+    private final ForwardGeocodingService forwardGeocodingService;
     private final GeoCountryResolver      geoCountryResolver;
     private final ReverseGeocodingService reverseGeocodingService;
     private final AppUserService          appUserService;
@@ -81,10 +83,13 @@ public class AdminController {
     @PostMapping("/reverse-geocoding")
     public String changeReverseGeocoding(@RequestParam("enabled") boolean enabled,
                                           RedirectAttributes ra) {
+        // Control both reverse and forward geocoding with the same property
+        // Both use Nominatim API and share the single GEOCODING_ENABLED flag
         reverseGeocodingService.setEnabled(enabled);
+        forwardGeocodingService.setEnabled(enabled);
         String label = enabled ? "Nominatim (adresses)" : "Désactivé (coordonnées GPS)";
         ra.addFlashAttribute("geocodingSuccess",
-                "Géocodage inverse changé en : " + label);
+                "Géocodage changé en : " + label);
         return "redirect:/admin";
     }
 

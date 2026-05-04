@@ -7,6 +7,29 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [Unreleased]
+
+### Nouveautés
+
+#### Carte OpenStreetMap interactive — Onglet Monde
+
+- Ajout d'une **carte interactive Leaflet** en haut de l'onglet "Monde" affichant tous les voyages géographiquement
+- Chaque voyage reçoit une **couleur unique** afin de distinguer les marqueurs dans la carte
+- Deux types de marqueurs :
+  - **🚩 Marqueur de voyage** : placé aux coordonnées GPS du voyage ou au centre du pays si pas de GPS
+  - **📍 Marqueur d'étape** : un marqueur pour chaque PlannerEvent (étape) avec localisation enregistrée
+- **Clustering automatique** : groupage des marqueurs proches (déclustering au zoom)
+- **Zoom automatique** : ajustement de la vue pour afficher tous les marqueurs au chargement
+- **Popups interactives** : au clic, affiche image du voyage, nom, localisation et lien rapide "Voir les détails"
+- Utilisation d'OpenStreetMap (gratuit, sans clé API) via CDN Leaflet
+- La section des statistiques par continent reste accessible en scroll down sous la carte
+
+### Améliorations
+
+- Performance : la carte se charge uniquement si au moins un marqueur est disponible
+
+---
+
 ## [2.3.0] - 2026-05-04
 
 ### Nouveautés

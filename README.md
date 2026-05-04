@@ -244,9 +244,32 @@ Vue synthétique de tous les voyages classés par année en alternance gauche/dr
 
 Agrège les données de localisation de tous les voyages et événements planner pour afficher :
 
+#### Carte interactive géographique
+
+Une **carte OpenStreetMap interactive** affiche vos voyages avec des marqueurs personnalisés :
+
+- **🚩 Marqueur de voyage** : placé aux coordonnées GPS du voyage ou au centre du pays si aucune coordonnée disponible
+- **📍 Marqueur d'étape** : un marqueur pour chaque étape (PlannerEvent) avec localisation enregistrée
+- **Couleurs uniques** : chaque voyage reçoit une couleur distincte pour faciliter la distinction
+- **Clustering automatique** : les marqueurs proches sont groupés ensemble (zoomable)
+- **Zoom automatique** : la map s'ajuste automatiquement pour afficher tous les marqueurs
+- **Popups interactives** : au clic sur un marqueur, affiche image du voyage, nom, localisation, et lien rapide vers les détails du voyage
+
+La source géographique des marqueurs est déterminée selon ce qui est disponible pour chaque voyage et étape :
+
+1. **PlannerEvents avec localisation** → marqueurs d'étapes (📍) au centre du pays résolu
+2. **Voyage sans événements** + **coordonnées GPS** → marqueur au GPS exact (🚩)
+3. **Voyage sans événements** + **champ Pays** → marqueur au centre du pays (🚩)
+
+#### Statistiques par continent
+
+Sous la carte, une section récapitulative par continent affiche :
+
 - **Compteurs** : nombre de pays visités, nombre de continents
 - **Détail par continent** : liste des pays avec drapeau emoji, nom en français, nombre de départements (France) ou d'états (USA) visités
 - **Sources** : indique si la localisation vient des coordonnées GPS d'un voyage, de son champ pays, ou d'un événement planner
+
+#### Modes de résolution géographique
 
 La résolution géographique fonctionne en deux modes configurables depuis l'administration :
 

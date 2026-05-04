@@ -18,6 +18,9 @@
         </a>
     </div>
 
+    <!-- World Map -->
+    <div id="worldMap" th:data-markers="${markersJson}"></div>
+
     <!-- Global summary cards -->
     <div class="row g-3 mb-4">
         <div class="col-6 col-md-3">
@@ -161,6 +164,11 @@
 </th:block>
 
 <th:block th:fragment="extraHead">
+    <!-- Leaflet Map Library -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.css"/>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster/dist/MarkerCluster.Default.css"/>
+    
     <style>
         .country-card {
             transition: transform 0.15s ease, box-shadow 0.15s ease;
@@ -185,11 +193,212 @@
         .toggle-icon.open {
             transform: rotate(180deg);
         }
+        
+        /* World Map Styles */
+        #worldMap {
+            height: 500px;
+            border-radius: 12px;
+            border: 1px solid #dee2e6;
+            margin-bottom: 2rem;
+            box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+        }
+        
+        .trip-marker {
+            font-size: 28px;
+        }
+        
+        .marker-popup {
+            min-width: 180px;
+        }
+        
+        .marker-popup img {
+            width: 100%;
+            height: 80px;
+            object-fit: cover;
+            border-radius: 4px;
+            margin-bottom: 6px;
+        }
+        
+        .marker-popup strong {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.9rem;
+        }
+
+        .marker-popup .location-label {
+            font-size: 0.8rem;
+            color: #666;
+            margin-bottom: 6px;
+        }
+        
+        .marker-popup .marker-type-badge {
+            display: inline-block;
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 3px;
+            background-color: #e9ecef;
+            color: #495057;
+            margin-bottom: 6px;
+        }
     </style>
 </th:block>
 
 <th:block th:fragment="extraScripts">
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://unpkg.com/leaflet.markercluster/dist/leaflet.markercluster.js"></script>
+    
     <script>
+        // Initialize world map with trip markers
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('=== World Map Initialization ===');
+            
+            const mapElement = document.getElementById('worldMap');
+            if (!mapElement) {
+                console.error('Map element not found!');
+                return;
+            }
+            
+            const markersJson = mapElement.dataset.markers || '[]';
+            console.log('Markers JSON length:', markersJson.length);
+            console.log('Markers JSON (first 500 chars):', markersJson.substring(0, 500));
+            
+            let markers = [];
+            try {
+                markers = JSON.parse(markersJson);
+                console.log('Successfully parsed', markers.length, 'markers');
+                markers.forEach((m, idx) => {
+                    console.log(`Marker ${idx}:`, m.tripName, `(${m.latitude}, ${m.longitude})`);
+                });
+            } catch (e) {
+                console.error('Failed to parse markers JSON:', e);
+                console.error('Raw JSON:', markersJson);
+                markers = [];
+            }
+            
+            if (markers.length === 0) {
+                console.log('No markers to display on map');
+                return;
+            }
+            
+            try {
+                // Create map
+                console.log('Creating map...');
+                const worldMap = L.map('worldMap').setView([20, 10], 2);
+                console.log('Map created successfully');
+                
+                // Add OpenStreetMap tile layer
+                L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+                    maxZoom: 19
+                }).addTo(worldMap);
+                console.log('Tile layer added');
+                
+                // Create marker cluster group
+                const markerClusterGroup = L.markerClusterGroup({
+                    maxClusterRadius: 50
+                });
+                console.log('Marker cluster group created');
+                
+                // Group markers by trip
+                const markersByTrip = {};
+                let addedMarkerCount = 0;
+                
+                markers.forEach(function(markerData) {
+                    if (!markerData.latitude || !markerData.longitude) {
+                        console.warn('Skipping marker with no coordinates:', markerData.title);
+                        return;
+                    }
+                    
+                    // Create custom HTML icon based on marker type
+                    const iconHtml = markerData.markerType === 'event' ? '📍' : '🚩';
+                    
+                    // Create popup HTML
+                    let popupHtml = '<div class="marker-popup">';
+                    
+                    if (markerData.tripImageUrl) {
+                        popupHtml += '<img src="' + markerData.tripImageUrl + '" alt="Trip image" onerror="this.style.display=\'none\'"/>';
+                    }
+                    
+                    popupHtml += '<strong>' + escapeHtml(markerData.tripName) + '</strong>';
+                    
+                    if (markerData.markerType === 'event') {
+                        popupHtml += '<div class="marker-type-badge">📍 Étape</div>';
+                        if (markerData.eventName) {
+                            popupHtml += '<div class="location-label"><strong>' + escapeHtml(markerData.eventName) + '</strong></div>';
+                        }
+                    }
+                    
+                    if (markerData.location) {
+                        popupHtml += '<div class="location-label"><i class="bi bi-geo-alt"></i> ' + escapeHtml(markerData.location) + '</div>';
+                    }
+                    
+                    popupHtml += '<a href="/trips/' + markerData.tripId + '" class="btn btn-sm btn-primary mt-2" style="font-size:0.75rem;"><i class="bi bi-eye me-1"></i>Détails</a>';
+                    popupHtml += '</div>';
+                    
+                    // Create marker with custom icon
+                    const marker = L.marker([markerData.latitude, markerData.longitude], {
+                        icon: L.divIcon({
+                            className: 'trip-marker',
+                            html: iconHtml,
+                            iconSize: [28, 28],
+                            iconAnchor: [14, 28],
+                            popupAnchor: [0, -28]
+                        })
+                    });
+                    
+                    marker.bindPopup(popupHtml);
+                    markerClusterGroup.addLayer(marker);
+                    addedMarkerCount++;
+                    
+                    // Track latitude/longitude for map bounds
+                    if (!markersByTrip[markerData.tripId]) {
+                        markersByTrip[markerData.tripId] = [];
+                    }
+                    markersByTrip[markerData.tripId].push(marker);
+                });
+                
+                console.log('Added', addedMarkerCount, 'markers to cluster group');
+                
+                // Add marker cluster group to map
+                worldMap.addLayer(markerClusterGroup);
+                console.log('Marker group added to map');
+                
+                // Fit map to all markers bounds
+                if (markerClusterGroup.getLayers().length > 0) {
+                    console.log('Fitting map bounds for', markerClusterGroup.getLayers().length, 'markers');
+                    if (markerClusterGroup.getLayers().length === 1) {
+                        // Single marker: zoom in closer
+                        const coords = markerClusterGroup.getLayers()[0].getLatLng();
+                        console.log('Single marker at', coords);
+                        worldMap.setView([coords.lat, coords.lng], 6);
+                    } else {
+                        // Multiple markers: fit to bounds
+                        const bounds = markerClusterGroup.getBounds();
+                        console.log('Bounds:', bounds);
+                        worldMap.fitBounds(bounds, { padding: [50, 50] });
+                    }
+                }
+                console.log('Map initialization completed successfully');
+            } catch (e) {
+                console.error('Error initializing map:', e);
+                console.error('Stack trace:', e.stack);
+            }
+            
+            // Helper function to escape HTML
+            function escapeHtml(text) {
+                if (!text) return '';
+                const map = {
+                    '&': '&amp;',
+                    '<': '&lt;',
+                    '>': '&gt;',
+                    '"': '&quot;',
+                    "'": '&#039;'
+                };
+                return String(text).replace(/[&<>"']/g, m => map[m]);
+            }
+        });
+        
+        // Toggle country details
         document.querySelectorAll('.country-toggle').forEach(btn => {
             btn.addEventListener('click', () => {
                 const target = document.querySelector(btn.getAttribute('data-target'));

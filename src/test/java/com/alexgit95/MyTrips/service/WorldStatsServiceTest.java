@@ -31,6 +31,9 @@ class WorldStatsServiceTest {
     @Mock
     private GeoCountryResolver geoResolver;
 
+    @Mock
+    private ForwardGeocodingService forwardGeocodingService;
+
     private final LocationParserService locationParser = new LocationParserService();
 
     @Test
@@ -68,7 +71,8 @@ class WorldStatsServiceTest {
                 tripRepository,
                 plannerEventRepository,
                 locationParser,
-                geoResolver
+                geoResolver,
+                forwardGeocodingService
         );
 
         Map<String, List<CountryStatsDto>> stats = service.computeStats();
@@ -100,7 +104,8 @@ class WorldStatsServiceTest {
                 tripRepository,
                 plannerEventRepository,
                 locationParser,
-                geoResolver
+                geoResolver,
+                forwardGeocodingService
         );
 
         Map<String, List<CountryStatsDto>> stats = service.computeStats();
