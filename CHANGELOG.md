@@ -7,7 +7,17 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
-## [2.2.1] - 2026-05-04
+## [2.3.0] - 2026-05-04
+
+### Nouveautés
+
+#### Récapitulatif voyage — histogramme quotidien dépliable
+
+- Ajout en bas de la page de détail voyage d'une section **dépliable** dédiée à l'analyse journalière des dépenses
+- Cette section affiche un **histogramme des dépenses par jour** sur toute la période du voyage
+- Ajout d'une **ligne horizontale de référence** correspondant au budget journalier prévu (`dailyExpenseBudget`) défini dans les paramètres du voyage
+- Rendu en graphique mixte (barres + ligne) via Chart.js, initialisé à l'ouverture de la section pour garder la page légère
+- Échelle Y du graphique quotidien calée à **budget journalier paramétré + 100%** (maximum = `dailyExpenseBudget × 2`) pour faciliter la lecture de l'écart
 
 ### Correctifs
 

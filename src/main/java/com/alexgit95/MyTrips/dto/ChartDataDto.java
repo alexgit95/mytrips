@@ -14,6 +14,10 @@ import java.util.List;
 public class ChartDataDto {
     // All trip dates from start to end
     private List<String> labels;
+    // Actual expense totals by day (non-cumulative)
+    private List<Double> dailyTotals;
+    // Flat configured daily expense budget line
+    private List<Double> plannedDailyLine;
     // Cumulative actual expenses, null for future dates (use null in JSON → null in Chart.js dataset)
     private List<Double> actualCumulative;
     // Flat budget line across all days

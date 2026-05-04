@@ -222,6 +222,8 @@ public class TripController {
 
         // Sérialiser les données de graphiques en JSON pour Chart.js
         model.addAttribute("chartLabelsJson",  objectMapper.writeValueAsString(chartData.getLabels()));
+        model.addAttribute("chartDailyJson",   objectMapper.writeValueAsString(chartData.getDailyTotals()));
+        model.addAttribute("chartPlannedDailyJson", objectMapper.writeValueAsString(chartData.getPlannedDailyLine()));
         model.addAttribute("chartActualJson",  objectMapper.writeValueAsString(chartData.getActualCumulative()));
         model.addAttribute("chartBudgetJson",  objectMapper.writeValueAsString(chartData.getBudgetLine()));
         model.addAttribute("chartTrendJson",   objectMapper.writeValueAsString(chartData.getTrendLine()));

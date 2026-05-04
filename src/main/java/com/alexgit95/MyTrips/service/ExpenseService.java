@@ -82,7 +82,11 @@ public class ExpenseService {
         // Build cumulative actual series and find last expense date
         List<Double> actualCumulative = new ArrayList<>();
         List<String> labels           = new ArrayList<>();
+        List<Double> dailyTotals      = new ArrayList<>();
         List<Double> budgetLine       = new ArrayList<>();
+        double configuredDailyBudget  = (trip.getDailyExpenseBudget() != null)
+            ? trip.getDailyExpenseBudget().doubleValue() : 0.0;
+        List<Double> plannedDailyLine = new ArrayList<>();
 
         double cumul = 0.0;
         LocalDate lastActualDay = null;
@@ -95,6 +99,8 @@ public class ExpenseService {
             LocalDate day = allDays.get(i);
             labels.add(day.format(fmt));
             budgetLine.add(budget);
+            dailyTotals.add(dailyExpense.getOrDefault(day, 0.0));
+            plannedDailyLine.add(configuredDailyBudget);
 
             if (!day.isAfter(today)) {
                 cumul += dailyExpense.getOrDefault(day, 0.0);
@@ -111,8 +117,7 @@ public class ExpenseService {
         // any pre-entered future expenses already recorded in dailyExpense
         List<Double> trendLine = new ArrayList<>(Collections.nCopies(allDays.size(), null));
 
-        double dailyBudget = (trip.getDailyExpenseBudget() != null)
-                ? trip.getDailyExpenseBudget().doubleValue() : 0.0;
+        double dailyBudget = configuredDailyBudget;
 
         // Check whether there are future pre-entered expenses to show
         boolean hasFutureExpenses = allDays.stream()
@@ -153,6 +158,8 @@ public class ExpenseService {
 
         return ChartDataDto.builder()
                 .labels(labels)
+            .dailyTotals(dailyTotals)
+            .plannedDailyLine(plannedDailyLine)
                 .actualCumulative(actualCumulative)
                 .budgetLine(budgetLine)
                 .trendLine(trendLine)
