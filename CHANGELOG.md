@@ -28,6 +28,7 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 - Performance : la carte se charge uniquement si au moins un marqueur est disponible
 - Performance géocodage : les coordonnées des étapes sont maintenant persistées sur chaque `PlannerEvent` après le premier géocodage, puis réutilisées aux chargements suivants (plus d'appel Nominatim systématique)
+- Administration : lancement manuel du géocodage des événements planner depuis l'IHM avec suivi d'avancement (déjà géocodés, restants, total, progression du run en cours)
 
 ---
 

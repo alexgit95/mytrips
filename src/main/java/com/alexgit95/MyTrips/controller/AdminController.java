@@ -7,6 +7,7 @@ import com.alexgit95.MyTrips.service.CategoryService;
 import com.alexgit95.MyTrips.service.DataImportExportService;
 import com.alexgit95.MyTrips.service.ForwardGeocodingService;
 import com.alexgit95.MyTrips.service.GeoCountryResolver;
+import com.alexgit95.MyTrips.service.PlannerGeocodingBatchService;
 import com.alexgit95.MyTrips.service.ReverseGeocodingService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -34,6 +35,7 @@ public class AdminController {
     private final DataImportExportService dataService;
     private final CategoryService         categoryService;
     private final ForwardGeocodingService forwardGeocodingService;
+    private final PlannerGeocodingBatchService plannerGeocodingBatchService;
     private final GeoCountryResolver      geoCountryResolver;
     private final ReverseGeocodingService reverseGeocodingService;
     private final AppUserService          appUserService;
@@ -44,9 +46,16 @@ public class AdminController {
 
     @GetMapping
     public String index(Model model) {
+        PlannerGeocodingBatchService.Progress geocodingBatchProgress = plannerGeocodingBatchService.getProgress();
+        long runTarget = geocodingBatchProgress.getRunTargetEvents();
+        long processed = geocodingBatchProgress.getProcessedInCurrentRun();
+        int geocodingBatchPercent = runTarget <= 0 ? 0 : (int) Math.min(100, (processed * 100) / runTarget);
+
         model.addAttribute("geoMode", geoCountryResolver.getMode());
         model.addAttribute("geoApiEnabled", geoCountryResolver.isApiEnabled());
         model.addAttribute("geocodingEnabled", reverseGeocodingService.isEnabled());
+        model.addAttribute("geocodingBatchProgress", geocodingBatchProgress);
+        model.addAttribute("geocodingBatchPercent", geocodingBatchPercent);
         model.addAttribute("appVersion", resolveAppVersion());
         model.addAttribute("apiKeys", apiAccessKeyService.findAllKeys());
         return "admin/index";
@@ -90,6 +99,24 @@ public class AdminController {
         String label = enabled ? "Nominatim (adresses)" : "Désactivé (coordonnées GPS)";
         ra.addFlashAttribute("geocodingSuccess",
                 "Géocodage changé en : " + label);
+        return "redirect:/admin";
+    }
+
+    @PostMapping("/planner-geocoding/start")
+    public String startPlannerGeocodingBatch(RedirectAttributes ra) {
+        PlannerGeocodingBatchService.StartResult result = plannerGeocodingBatchService.startManualBatch();
+
+        if (result == PlannerGeocodingBatchService.StartResult.GEOCODING_DISABLED) {
+            ra.addFlashAttribute("geocodingBatchError",
+                    "Impossible de lancer: activez d'abord le geocodage Nominatim.");
+        } else if (result == PlannerGeocodingBatchService.StartResult.ALREADY_RUNNING) {
+            ra.addFlashAttribute("geocodingBatchInfo",
+                    "Un traitement est deja en cours.");
+        } else {
+            ra.addFlashAttribute("geocodingBatchSuccess",
+                    "Traitement de geocodage lance en arriere-plan.");
+        }
+
         return "redirect:/admin";
     }
 

@@ -353,6 +353,89 @@
             </div>
         </div>
 
+        <!-- Manual planner geocoding batch card -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">
+                <div class="card-header text-white"
+                     th:classappend="${geocodingBatchProgress.running} ? 'bg-warning text-dark' : 'bg-primary'">
+                    <h5 class="mb-0">
+                        <i class="bi bi-lightning-charge me-2"></i>Géocodage planner manuel
+                        <span class="badge ms-2"
+                              th:classappend="${geocodingBatchProgress.running} ? 'bg-dark text-warning' : 'bg-light text-primary'"
+                              th:text="${geocodingBatchProgress.running} ? 'En cours' : 'Prêt'">status</span>
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div th:if="${geocodingBatchSuccess}" class="alert alert-success py-2 mb-2">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <span th:text="${geocodingBatchSuccess}"></span>
+                    </div>
+                    <div th:if="${geocodingBatchInfo}" class="alert alert-info py-2 mb-2">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <span th:text="${geocodingBatchInfo}"></span>
+                    </div>
+                    <div th:if="${geocodingBatchError}" class="alert alert-danger py-2 mb-2">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <span th:text="${geocodingBatchError}"></span>
+                    </div>
+
+                    <p class="mb-2">
+                        Lancement manuel depuis cette page. Aucun géocodage automatique n'est exécuté au chargement de la carte.
+                    </p>
+
+                    <div class="row g-2 mb-3">
+                        <div class="col-4">
+                            <div class="border rounded p-2 h-100 text-center">
+                                <div class="small text-muted">Déjà géocodés (base)</div>
+                                <div class="h5 mb-0" th:text="${geocodingBatchProgress.geocodedEvents}">0</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2 h-100 text-center">
+                                <div class="small text-muted">En cours / restants</div>
+                                <div class="h5 mb-0" th:text="${geocodingBatchProgress.pendingEvents}">0</div>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <div class="border rounded p-2 h-100 text-center">
+                                <div class="small text-muted">Total</div>
+                                <div class="h5 mb-0" th:text="${geocodingBatchProgress.totalEvents}">0</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="mb-2">
+                        <div class="d-flex justify-content-between small text-muted mb-1">
+                            <span>Progression run courant</span>
+                            <span th:text="${geocodingBatchProgress.processedInCurrentRun} + ' / ' + ${geocodingBatchProgress.runTargetEvents}">0 / 0</span>
+                        </div>
+                        <div class="progress" role="progressbar" aria-label="progression geocodage">
+                            <div class="progress-bar"
+                                 th:classappend="${geocodingBatchProgress.running} ? ' progress-bar-striped progress-bar-animated' : ''"
+                                 th:style="'width:' + ${geocodingBatchPercent} + '%'"
+                                 th:text="${geocodingBatchPercent} + '%'">0%</div>
+                        </div>
+                    </div>
+
+                    <div class="small text-muted mb-3">
+                        Dernier état : <span th:text="${geocodingBatchProgress.lastMessage}">-</span><br/>
+                        Geocodes run courant : <strong th:text="${geocodingBatchProgress.geocodedInCurrentRun}">0</strong> ;
+                        Echecs run courant : <strong th:text="${geocodingBatchProgress.failedInCurrentRun}">0</strong>
+                    </div>
+
+                    <form th:action="@{/admin/planner-geocoding/start}" method="post" class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary w-100"
+                                th:disabled="${geocodingBatchProgress.running or !geocodingEnabled}">
+                            <i class="bi bi-play-circle me-2"></i>Lancer le géocodage planner
+                        </button>
+                    </form>
+                    <small class="text-muted mt-1 d-block" th:if="${!geocodingEnabled}">
+                        Activez d'abord le géocodage Nominatim pour lancer ce traitement.
+                    </small>
+                </div>
+            </div>
+        </div>
+
     </div>
 
 </th:block>
@@ -365,6 +448,9 @@
                 new bootstrap.Collapse(el, { toggle: false }).show();
             }
         });
+    </script>
+    <script th:if="${geocodingBatchProgress.running}">
+        setTimeout(function () { window.location.reload(); }, 3000);
     </script>
 </th:block>
 </body>

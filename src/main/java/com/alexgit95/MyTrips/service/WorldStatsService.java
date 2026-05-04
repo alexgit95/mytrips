@@ -32,7 +32,6 @@ public class WorldStatsService {
     private final PlannerEventRepository plannerEventRepository;
     private final LocationParserService locationParser;
     private final GeoCountryResolver geoResolver;
-    private final ForwardGeocodingService forwardGeocoding;
 
     @Transactional(readOnly = true)
     public Map<String, List<CountryStatsDto>> computeStats() {
@@ -138,7 +137,7 @@ public class WorldStatsService {
      *
      * Each trip is assigned a unique color to distinguish markers.
      */
-    @Transactional
+    @Transactional(readOnly = true)
     public List<TripMarkerDto> getMapMarkers() {
         log.info("=== getMapMarkers() started ===");
         List<TripMarkerDto> markers = new ArrayList<>();
@@ -170,19 +169,10 @@ public class WorldStatsService {
                 if (event.getLocation() != null && !event.getLocation().isBlank()) {
                     double[] coords = null;
 
-                    // Reuse persisted coordinates first to avoid repeated API calls.
+                    // Never geocode during map rendering: only reuse persisted coordinates.
                     if (event.getLatitude() != null && event.getLongitude() != null) {
                         coords = new double[]{event.getLatitude(), event.getLongitude()};
-                        log.info("      - Using cached event coordinates: lat={}, lng={}", coords[0], coords[1]);
-                    } else {
-                        log.info("      - Attempting to geocode address: {}", event.getLocation());
-                        coords = forwardGeocoding.geocode(event.getLocation());
-                        if (coords != null && coords.length >= 2) {
-                            event.setLatitude(coords[0]);
-                            event.setLongitude(coords[1]);
-                            plannerEventRepository.save(event);
-                            log.info("      - Cached coordinates on event for reuse");
-                        }
+                        log.info("      - Using persisted event coordinates: lat={}, lng={}", coords[0], coords[1]);
                     }
                     
                     if (coords != null && coords.length >= 2) {
