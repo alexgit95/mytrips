@@ -72,7 +72,8 @@ class PlannerGeocodingBatchServiceTest {
                 .build();
 
         when(plannerEventRepository.findAllNeedingGeocoding()).thenReturn(List.of(event));
-        when(forwardGeocodingService.geocode("Zion National Park")).thenReturn(new double[]{37.3, -113.0});
+        when(forwardGeocodingService.geocode("Zion National Park")).thenReturn(
+                new ForwardGeocodingService.GeocodingResult(37.3, -113.0, "Zion National Park, Utah"));
 
         PlannerGeocodingBatchService.StartResult result = service.startManualBatch();
         assertEquals(PlannerGeocodingBatchService.StartResult.STARTED, result);
@@ -111,7 +112,7 @@ class PlannerGeocodingBatchServiceTest {
         when(forwardGeocodingService.geocode("Somewhere")).thenAnswer(invocation -> {
             enteredGeocode.countDown();
             allowGeocodeToFinish.await(1, TimeUnit.SECONDS);
-            return new double[]{1.0, 2.0};
+            return new ForwardGeocodingService.GeocodingResult(1.0, 2.0, "Somewhere, World");
         });
 
         assertEquals(PlannerGeocodingBatchService.StartResult.STARTED, service.startManualBatch());
