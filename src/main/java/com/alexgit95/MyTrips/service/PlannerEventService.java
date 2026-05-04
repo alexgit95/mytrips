@@ -44,6 +44,7 @@ public class PlannerEventService {
 
     @Transactional
     public PlannerEvent save(PlannerEvent event) {
+        event.setComment(normalizeComment(event.getComment()));
         return plannerEventRepository.save(event);
     }
 
@@ -52,6 +53,7 @@ public class PlannerEventService {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new IllegalArgumentException("Voyage introuvable : " + tripId));
         event.setTrip(trip);
+        event.setComment(normalizeComment(event.getComment()));
         return plannerEventRepository.save(event);
     }
 
@@ -61,12 +63,19 @@ public class PlannerEventService {
         existing.setName(updated.getName());
         existing.setEventDateTime(updated.getEventDateTime());
         existing.setLocation(updated.getLocation());
-        existing.setComment(updated.getComment());
+        existing.setComment(normalizeComment(updated.getComment()));
         return plannerEventRepository.save(existing);
     }
 
     @Transactional
     public void delete(Long eventId) {
         plannerEventRepository.deleteById(eventId);
+    }
+
+    static String normalizeComment(String comment) {
+        if (comment == null || "undefined".equals(comment)) {
+            return "";
+        }
+        return comment;
     }
 }

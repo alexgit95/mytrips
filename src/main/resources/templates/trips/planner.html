@@ -367,8 +367,8 @@
         eventsMap[span.dataset.id] = {
             name:     span.dataset.name,
             datetime: span.dataset.datetime,
-            location: span.dataset.location,
-            comment:  span.dataset.comment,
+            location: span.dataset.location ?? '',
+            comment:  span.dataset.comment ?? '',
             action:   span.dataset.action,
             commentAction: span.dataset.commentAction
         };
@@ -383,10 +383,10 @@
         const editForm = document.getElementById('editForm');
         if (!editForm) return;
 
-        document.getElementById('editName').value     = data.name;
-        document.getElementById('editDateTime').value = data.datetime;
-        document.getElementById('editLocation').value = data.location;
-        document.getElementById('editComment').value  = data.comment;
+        document.getElementById('editName').value     = data.name ?? '';
+        document.getElementById('editDateTime').value = data.datetime ?? '';
+        document.getElementById('editLocation').value = data.location ?? '';
+        document.getElementById('editComment').value  = data.comment ?? '';
         editForm.action = data.action;
 
         const modal = new bootstrap.Modal(document.getElementById('editModal'));
@@ -401,7 +401,7 @@
         const commentForm = document.getElementById('commentForm');
         if (!commentForm) return;
 
-        document.getElementById('commentText').value = data.comment;
+        document.getElementById('commentText').value = data.comment ?? '';
         commentForm.action = data.commentAction;
 
         const modal = new bootstrap.Modal(document.getElementById('commentModal'));

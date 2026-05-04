@@ -21,6 +21,11 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ### Correctifs
 
+#### Planner - commentaire vide conserve une valeur vide
+
+- La modale de modification d'un événement planner ne préremplit plus le champ commentaire avec `undefined` lorsqu'aucun commentaire n'existe
+- La sauvegarde normalise désormais les commentaires planner absents pour conserver une chaîne vide au lieu de persister `undefined`
+
 #### Bouton "Ici et maintenant" — prise en compte de l'heure locale du client
 
 - La date/heure de l'événement créé via le bouton **"Ici et maintenant"** utilise désormais l'heure locale du navigateur/mobile au lieu de l'heure du serveur
