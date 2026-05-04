@@ -7,6 +7,17 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.2.1] - 2026-05-04
+
+### Correctifs
+
+#### Bouton "Ici et maintenant" — prise en compte de l'heure locale du client
+
+- La date/heure de l'événement créé via le bouton **"Ici et maintenant"** utilise désormais l'heure locale du navigateur/mobile au lieu de l'heure du serveur
+- Corrige les décalages horaires lorsque l'utilisateur se trouve dans un fuseau horaire différent de celui du serveur
+
+---
+
 ## [2.2.0] - 2026-04-03
 
 ### Nouveautés

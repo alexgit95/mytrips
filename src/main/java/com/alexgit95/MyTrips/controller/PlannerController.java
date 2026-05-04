@@ -174,7 +174,8 @@ public class PlannerController {
             @RequestParam String name,
             @RequestParam(required = false) Double latitude,
             @RequestParam(required = false) Double longitude,
-            @RequestParam(required = false) String prefetchedLocation) {
+            @RequestParam(required = false) String prefetchedLocation,
+            @RequestParam(required = false) String clientDateTime) {
 
         Trip trip = tripService.findById(tripId);
         Map<String, Object> response = new HashMap<>();
@@ -196,7 +197,17 @@ public class PlannerController {
         // Créer l'événement
         PlannerEvent event = new PlannerEvent();
         event.setName(name.trim());
-        event.setEventDateTime(LocalDateTime.now());
+        LocalDateTime eventDateTime;
+        if (clientDateTime != null && !clientDateTime.isBlank()) {
+            try {
+                eventDateTime = LocalDateTime.parse(clientDateTime);
+            } catch (Exception e) {
+                eventDateTime = LocalDateTime.now();
+            }
+        } else {
+            eventDateTime = LocalDateTime.now();
+        }
+        event.setEventDateTime(eventDateTime);
 
         // Déterminer la localisation
         String location = null;

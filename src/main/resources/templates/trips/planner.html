@@ -484,6 +484,15 @@
             params.append('longitude', longitude);
         }
 
+        // Injecter la date/heure locale du mobile (format ISO sans timezone, ex: 2026-05-04T14:32)
+        const now = new Date();
+        const localDatetime = now.getFullYear() + '-'
+            + String(now.getMonth() + 1).padStart(2, '0') + '-'
+            + String(now.getDate()).padStart(2, '0') + 'T'
+            + String(now.getHours()).padStart(2, '0') + ':'
+            + String(now.getMinutes()).padStart(2, '0');
+        params.append('clientDateTime', localDatetime);
+
         fetch(`/trips/${tripId}/planner/events/here-and-now`, {
             method: 'POST',
             body: params,
