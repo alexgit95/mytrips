@@ -15,6 +15,7 @@ import java.time.LocalDateTime;
 import java.util.Optional;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -71,5 +72,31 @@ class PlannerEventServiceTest {
         verify(plannerEventRepository).save(captor.capture());
         assertEquals("", captor.getValue().getComment());
         assertEquals(trip, captor.getValue().getTrip());
+    }
+
+    @Test
+    void update_shouldClearCachedCoordinatesWhenLocationChanges() {
+        PlannerEvent existing = PlannerEvent.builder()
+                .id(11L)
+                .name("Spot")
+                .eventDateTime(LocalDateTime.of(2026, 5, 4, 9, 0))
+                .location("Paris")
+                .latitude(48.8566)
+                .longitude(2.3522)
+                .build();
+        PlannerEvent updated = PlannerEvent.builder()
+                .name("Spot")
+                .eventDateTime(LocalDateTime.of(2026, 5, 4, 10, 0))
+                .location("Lyon")
+                .build();
+
+        when(plannerEventRepository.findById(11L)).thenReturn(Optional.of(existing));
+        when(plannerEventRepository.save(existing)).thenReturn(existing);
+
+        service.update(11L, updated);
+
+        assertNull(existing.getLatitude());
+        assertNull(existing.getLongitude());
+        verify(plannerEventRepository).save(existing);
     }
 }

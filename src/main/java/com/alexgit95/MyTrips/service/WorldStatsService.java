@@ -138,7 +138,7 @@ public class WorldStatsService {
      *
      * Each trip is assigned a unique color to distinguish markers.
      */
-    @Transactional(readOnly = true)
+    @Transactional
     public List<TripMarkerDto> getMapMarkers() {
         log.info("=== getMapMarkers() started ===");
         List<TripMarkerDto> markers = new ArrayList<>();
@@ -168,10 +168,22 @@ public class WorldStatsService {
                 log.info("    - Event: {} (location='{}')", event.getName(), event.getLocation());
                 
                 if (event.getLocation() != null && !event.getLocation().isBlank()) {
-                    log.info("      - Attempting to geocode address: {}", event.getLocation());
-                    
-                    // Try to geocode the address to exact coordinates
-                    double[] coords = forwardGeocoding.geocode(event.getLocation());
+                    double[] coords = null;
+
+                    // Reuse persisted coordinates first to avoid repeated API calls.
+                    if (event.getLatitude() != null && event.getLongitude() != null) {
+                        coords = new double[]{event.getLatitude(), event.getLongitude()};
+                        log.info("      - Using cached event coordinates: lat={}, lng={}", coords[0], coords[1]);
+                    } else {
+                        log.info("      - Attempting to geocode address: {}", event.getLocation());
+                        coords = forwardGeocoding.geocode(event.getLocation());
+                        if (coords != null && coords.length >= 2) {
+                            event.setLatitude(coords[0]);
+                            event.setLongitude(coords[1]);
+                            plannerEventRepository.save(event);
+                            log.info("      - Cached coordinates on event for reuse");
+                        }
+                    }
                     
                     if (coords != null && coords.length >= 2) {
                         log.info("      - Geocoded to: lat={}, lng={}", coords[0], coords[1]);

@@ -102,6 +102,8 @@ public class ImportExportWorker {
                             .id(pe.getId()).name(pe.getName())
                             .eventDateTime(pe.getEventDateTime())
                             .location(pe.getLocation())
+                        .latitude(pe.getLatitude())
+                        .longitude(pe.getLongitude())
                             .comment(pe.getComment())
                             .tripId(pe.getTrip().getId())
                             .build())
@@ -289,6 +291,8 @@ public class ImportExportWorker {
                             .name(dto.getName())
                             .eventDateTime(dto.getEventDateTime())
                             .location(dto.getLocation())
+                            .latitude(dto.getLatitude())
+                            .longitude(dto.getLongitude())
                             .comment(dto.getComment())
                             .trip(trip)
                             .build());

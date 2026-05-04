@@ -223,6 +223,8 @@ public class PlannerController {
         }
         
         event.setLocation(location);
+        event.setLatitude(latitude);
+        event.setLongitude(longitude);
         plannerEventService.create(tripId, event);
 
         response.put("success", true);

@@ -29,6 +29,12 @@ public class PlannerEvent {
     @Column
     private String location;
 
+    @Column
+    private Double latitude;
+
+    @Column
+    private Double longitude;
+
     @Column(columnDefinition = "TEXT")
     private String comment;
 
