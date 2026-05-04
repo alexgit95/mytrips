@@ -65,7 +65,7 @@ public class PlannerGeocodingBatchService {
         if (!running.get()) {
             return StopResult.NOT_RUNNING;
         }
-        stopRequested.set(true);
+        requestStop();
         lastMessage = "Arret demande, finalisation en cours";
         return StopResult.STOP_REQUESTED;
     }
@@ -167,6 +167,10 @@ public class PlannerGeocodingBatchService {
 
     void sleepMillis(long delayMillis) throws InterruptedException {
         Thread.sleep(delayMillis);
+    }
+
+    void requestStop() {
+        stopRequested.set(true);
     }
 
     public enum StartResult {

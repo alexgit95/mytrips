@@ -175,7 +175,7 @@ class PlannerGeocodingBatchServiceTest {
             recordedSleeps.add(delayMillis);
             nowMillis += delayMillis;
             if (stopAfterFirstSleep) {
-                stopManualBatch();
+                requestStop();
             }
         }
     }
