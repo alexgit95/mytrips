@@ -244,6 +244,7 @@ La vue **Road Trip** est accessible depuis la page de détail d'un voyage **term
 Elle affiche :
 
 - Une **carte OpenStreetMap interactive** avec tous les points GPS du voyage reliés dans l'ordre chronologique
+- Un **sélecteur de date (timeline)** permettant de filtrer la carte sur une journée précise — avec un bouton « 🗺 Tout le voyage » pour revenir à la vue complète
 - Un **itinéraire routier stylisé** avec dégradé de couleurs (orange → bleu) reprenant les routes réelles via l'API OSRM
 - Des **marqueurs numérotés** pour chaque étape avec popup (nom, localisation, date)
 - La **distance totale du trajet** calculée via OSRM (ou à vol d'oiseau si l'API est indisponible)

@@ -7,6 +7,20 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.5.1] - 2026-05-05
+
+### Améliorations
+
+#### Road Trip — sélecteur de date (timeline)
+
+- Ajout d'une **barre de dates horizontale défilable** au-dessus de la carte Road Trip, générée automatiquement à partir des jours représentés dans les étapes du voyage
+- Un bouton **« 🗺 Tout le voyage »** (sélectionné par défaut) affiche l'itinéraire complet
+- Chaque bouton de date filtre la carte pour n'afficher que **les étapes et le trajet du jour sélectionné**, avec recalcul de la distance via OSRM
+- La liste des étapes sous la carte se met à jour en cohérence avec le filtre actif
+- Design : boutons pill scrollables avec état actif orange (jour) / bleu (tout), connecteurs visuels entre les dates
+
+---
+
 ## [2.5.0] - 2026-05-05
 
 ### Nouveautés
