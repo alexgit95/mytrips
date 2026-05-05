@@ -50,21 +50,29 @@ public class RoadTripController {
         // Récupérer le pays d'origine configuré (code ISO ex: "FR")
         String homeCountryIso = appSettingsService.getHomeCountry();
 
-        // Déterminer si le voyage se déroule à l'étranger
-        // = au moins un point se situe hors du pays d'origine
-        boolean isAbroad = eventsWithCoords.stream()
-                .anyMatch(e -> {
+        // Séparer les points selon qu'ils sont dans le pays d'origine ou à l'étranger
+        List<PlannerEvent> homeCountryEvents = eventsWithCoords.stream()
+                .filter(e -> {
                     String iso = geoCountryResolver.resolve(e.getLatitude(), e.getLongitude());
-                    return iso != null && !iso.equalsIgnoreCase(homeCountryIso);
-                });
+                    return iso != null && iso.equalsIgnoreCase(homeCountryIso);
+                })
+                .collect(Collectors.toList());
 
-        // Si voyage à l'étranger, exclure les points situés dans le pays d'origine
+        boolean isAbroad = homeCountryEvents.size() < eventsWithCoords.size(); // au moins un point étranger
+
+        // Règle de filtrage :
+        // - Si le voyage est à l'étranger ET que les points dans le pays d'origine sont <= 4
+        //   → exclure ces points (simples escales de départ/retour)
+        // - Si le voyage est à l'étranger ET que les points dans le pays d'origine sont > 4
+        //   → voyage à cheval sur deux pays, on affiche TOUS les points
+        // - Si voyage entièrement dans le pays d'origine → afficher tous les points
+        boolean homePointsFiltered = isAbroad && homeCountryEvents.size() <= 4;
+
         List<PlannerEvent> filteredEvents;
-        if (isAbroad) {
+        if (homePointsFiltered) {
             filteredEvents = eventsWithCoords.stream()
                     .filter(e -> {
                         String iso = geoCountryResolver.resolve(e.getLatitude(), e.getLongitude());
-                        // Garder si pays inconnu ou différent du pays d'origine
                         return iso == null || !iso.equalsIgnoreCase(homeCountryIso);
                     })
                     .collect(Collectors.toList());
@@ -88,7 +96,9 @@ public class RoadTripController {
         model.addAttribute("trip", trip);
         model.addAttribute("waypointsJson", objectMapper.writeValueAsString(waypoints));
         model.addAttribute("isAbroad", isAbroad);
+        model.addAttribute("homePointsFiltered", homePointsFiltered);
         model.addAttribute("homeCountry", homeCountryIso);
+        model.addAttribute("homeCountryPointCount", homeCountryEvents.size());
 
         return "trips/road-trip";
     }

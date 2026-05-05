@@ -7,6 +7,22 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.5.2] - 2026-05-05
+
+### Améliorations
+
+#### Road Trip — règle de filtrage du pays d'origine affinée
+
+- **Nouvelle règle de filtrage** pour les voyages à cheval entre le pays d'origine et un pays étranger :
+  - Si le nombre d'étapes dans le pays d'origine est **≤ 4** → ces points sont exclus (simples escales de départ / retour, comportement précédent)
+  - Si le nombre d'étapes dans le pays d'origine est **> 4** → tous les points sont affichés (voyage multi-pays significatif)
+- Le badge dans l'en-tête de la page Road Trip indique désormais :
+  - 🔵 « Points du pays d'origine exclus (N ≤ 4) » quand le filtrage s'applique
+  - 🟢 « Voyage multi-pays — tous les points affichés » quand le pays d'origine est présent en nombre suffisant
+- Exposition des attributs `homePointsFiltered` et `homeCountryPointCount` dans le modèle Thymeleaf
+
+---
+
 ## [2.5.1] - 2026-05-05
 
 ### Améliorations

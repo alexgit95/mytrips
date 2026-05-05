@@ -252,7 +252,16 @@ Elle affiche :
 
 #### Filtrage par pays d'origine
 
-Si le voyage **se déroule dans un pays différent du pays d'origine** configuré en administration, les étapes situées dans le pays d'origine sont **automatiquement exclues** de la carte et du calcul de distance. Cela permet de ne représenter que la partie « étrangère » du voyage (ex. vols aller/retour depuis la France vers l'Italie → les étapes françaises sont ignorées).
+Si le voyage **se déroule dans un pays différent du pays d'origine** configuré en administration, les étapes situées dans le pays d'origine sont traitées selon la règle suivante :
+
+| Nombre de points dans le pays d'origine | Comportement |
+|---|---|
+| **≤ 4** | Points exclus de la carte et du calcul de distance (simples escales de départ / retour) |
+| **> 4** | Tous les points affichés — le voyage est considéré comme un voyage multi-pays |
+
+Cela permet de gérer correctement :
+- Un **aller-retour à l'étranger** depuis la France (quelques étapes françaises ignorées)
+- Un **voyage à cheval entre deux pays** avec une part significative dans le pays d'origine (tous les points conservés)
 
 Le pays d'origine est configurable dans **Administration > Pays d'origine** (code ISO 3166-1 alpha-2, défaut : `FR` — France). Ce paramètre est inclus dans l'export/import JSON.
 

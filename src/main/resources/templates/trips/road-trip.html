@@ -147,8 +147,11 @@
                 <span th:text="${#temporals.format(trip.startDate, 'dd MMMM yyyy')}"></span>
                 &rarr;
                 <span th:text="${#temporals.format(trip.endDate, 'dd MMMM yyyy')}"></span>
-                <span th:if="${isAbroad}" class="ms-2 badge bg-info text-dark">
-                    <i class="bi bi-filter me-1"></i>Points du pays d'origine (<span th:text="${homeCountry}"></span>) exclus
+                <span th:if="${homePointsFiltered}" class="ms-2 badge bg-info text-dark">
+                    <i class="bi bi-filter me-1"></i>Points du pays d'origine (<span th:text="${homeCountry}"></span>) exclus (<span th:text="${homeCountryPointCount}"></span> ≤ 4)
+                </span>
+                <span th:if="${isAbroad and !homePointsFiltered and homeCountryPointCount > 0}" class="ms-2 badge bg-success text-white">
+                    <i class="bi bi-globe2 me-1"></i>Voyage multi-pays — tous les points affichés (<span th:text="${homeCountry}"></span> : <span th:text="${homeCountryPointCount}"></span> pts)
                 </span>
             </p>
         </div>
