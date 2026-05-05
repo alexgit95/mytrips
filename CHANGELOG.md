@@ -7,6 +7,45 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.5.0] - 2026-05-05
+
+### Nouveautés
+
+#### Fonctionnalité Road Trip — carte d'itinéraire
+
+- Ajout d'un **bouton Road Trip** sur la page de détail d'un voyage, disponible uniquement si :
+  - Le voyage est **terminé** (date de fin antérieure à aujourd'hui)
+  - Le voyage possède **plus de 4 étapes géocodées** dans le planner
+- Nouveau panneau **Road Trip** (`/trips/{id}/road-trip`) affichant :
+  - Une **carte OpenStreetMap interactive** (Leaflet) avec tous les points GPS du voyage dans l'ordre chronologique
+  - Un **itinéraire routier** calculé via l'API OSRM (routage réel sur les routes), avec tracé en dégradé orange → bleu
+  - Des **marqueurs SVG numérotés** pour chaque étape avec popups (nom, localisation, date, badge départ/arrivée)
+  - Des **flèches directionnelles** le long de l'itinéraire pour indiquer le sens de parcours
+  - La **distance totale** du trajet en kilomètres (routière via OSRM, ou à vol d'oiseau si l'API est indisponible)
+  - Trois **cartes de statistiques** : distance totale, nombre d'étapes, durée du voyage
+  - La **liste détaillée des étapes** (numéro, nom, localisation, date)
+
+#### Pays d'origine configurable
+
+- Nouveau paramètre de configuration **Pays d'origine** dans l'administration (code ISO 3166-1 alpha-2, ex. `FR`, `DE`, `IT`)
+- Valeur par défaut : `FR` (France)
+- **Filtrage intelligent** sur la vue Road Trip : si le voyage se déroule dans un autre pays que le pays d'origine, les étapes situées dans le pays d'origine sont **automatiquement exclues** de la carte et du calcul de distance
+
+#### Export / Import du pays d'origine
+
+- Le champ `homeCountry` est désormais inclus dans l'export JSON (`ExportDto`)
+- Lors d'un import, la valeur `homeCountry` est restaurée si présente dans le fichier (compatibilité ascendante : les anciens exports sans ce champ restent importables)
+
+### Architecture
+
+- Nouvelle entité `AppSettings` (table `app_settings`, singleton id=1) pour stocker les paramètres globaux de l'application
+- Nouveau `AppSettingsRepository` et `AppSettingsService`
+- Nouveau `RoadTripController` gérant l'endpoint `GET /trips/{id}/road-trip`
+- Nouvelle méthode `PlannerEventRepository#countByTripIdWithCoordinates(Long tripId)`
+- Le pays d'origine est déterminé pour chaque point via le `GeoCountryResolver` existant (modes local et API)
+
+---
+
 ## [2.4.0]
 
 ### Nouveautés

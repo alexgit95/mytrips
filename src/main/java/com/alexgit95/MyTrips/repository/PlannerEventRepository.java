@@ -33,4 +33,12 @@ public interface PlannerEventRepository extends JpaRepository<PlannerEvent, Long
                             and e.longitude is not null
                         """)
         long countEventsWithCoordinates();
+
+        @Query("""
+                        select count(e) from PlannerEvent e
+                        where e.trip.id = :tripId
+                            and e.latitude is not null
+                            and e.longitude is not null
+                        """)
+        long countByTripIdWithCoordinates(Long tripId);
 }

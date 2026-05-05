@@ -353,10 +353,53 @@
             </div>
         </div>
 
-        <!-- Manual planner geocoding batch card -->
+        <!-- Home country card (Road Trip feature) -->
         <div class="col-md-6">
             <div class="card shadow-sm h-100">
-                <div class="card-header text-white"
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="mb-0"><i class="bi bi-sign-turn-right me-2"></i>Pays d'origine — Road Trip</h5>
+                </div>
+                <div class="card-body">
+                    <p class="text-muted mb-3">
+                        Définissez votre pays d'origine (code ISO 3166-1 alpha-2, ex : <code>FR</code>, <code>DE</code>, <code>IT</code>).
+                        Les points GPS situés dans ce pays seront exclus de la vue Road Trip lorsque le voyage se déroule à l'étranger.
+                    </p>
+
+                    <div th:if="${homeCountrySuccess}" class="alert alert-success py-2 mb-3">
+                        <i class="bi bi-check-circle me-2"></i>
+                        <span th:text="${homeCountrySuccess}"></span>
+                    </div>
+                    <div th:if="${homeCountryError}" class="alert alert-danger py-2 mb-3">
+                        <i class="bi bi-exclamation-triangle me-2"></i>
+                        <span th:text="${homeCountryError}"></span>
+                    </div>
+
+                    <form th:action="@{/admin/home-country}" method="post" class="row g-2 align-items-end">
+                        <div class="col-8">
+                            <label for="homeCountry" class="form-label fw-semibold">Code ISO du pays d'origine</label>
+                            <input type="text" id="homeCountry" name="homeCountry"
+                                   class="form-control text-uppercase"
+                                   maxlength="3" placeholder="ex: FR"
+                                   th:value="${homeCountry}" required/>
+                            <div class="form-text">
+                                <a href="https://fr.wikipedia.org/wiki/ISO_3166-1_alpha-2" target="_blank" rel="noopener noreferrer">
+                                    <i class="bi bi-box-arrow-up-right me-1"></i>Liste des codes ISO pays
+                                </a>
+                            </div>
+                        </div>
+                        <div class="col-4">
+                            <button type="submit" class="btn btn-warning w-100">
+                                <i class="bi bi-save me-1"></i>Sauvegarder
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Manual planner geocoding batch card -->
+        <div class="col-md-6">
+            <div class="card shadow-sm h-100">                <div class="card-header text-white"
                      th:classappend="${geocodingBatchProgress.running} ? 'bg-warning text-dark' : 'bg-primary'">
                     <h5 class="mb-0">
                         <i class="bi bi-lightning-charge me-2"></i>Géocodage planner manuel

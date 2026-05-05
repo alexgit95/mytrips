@@ -17,4 +17,6 @@ public class ExportDto {
     private List<ExpenseExportDto> expenses;
     private List<PlannerEventExportDto> plannerEvents;
     private List<UserExportDto> users;
+    /** Pays d'origine (code ISO 3166-1 alpha-2, ex: "FR"). Peut être null pour la compatibilité ascendante. */
+    private String homeCountry;
 }
