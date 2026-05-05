@@ -7,6 +7,62 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.4.0]
+
+### Nouveautés
+
+#### Carte OpenStreetMap interactive — Onglet Monde
+
+- Ajout d'une **carte interactive Leaflet** en haut de l'onglet "Monde" affichant tous les voyages géographiquement
+- Chaque voyage reçoit une **couleur unique** afin de distinguer les marqueurs dans la carte
+- Deux types de marqueurs :
+  - **🚩 Marqueur de voyage** : placé aux coordonnées GPS du voyage ou au centre du pays si pas de GPS
+  - **📍 Marqueur d'étape** : un marqueur pour chaque PlannerEvent (étape) avec localisation enregistrée
+- **Clustering automatique** : groupage des marqueurs proches (déclustering au zoom)
+- **Zoom automatique** : ajustement de la vue pour afficher tous les marqueurs au chargement
+- **Popups interactives** : au clic, affiche image du voyage, nom, localisation et lien rapide "Voir les détails"
+- Utilisation d'OpenStreetMap (gratuit, sans clé API) via CDN Leaflet
+- La section des statistiques par continent reste accessible en scroll down sous la carte
+
+### Améliorations
+
+- Performance : la carte se charge uniquement si au moins un marqueur est disponible
+- Performance géocodage : les coordonnées des étapes sont maintenant persistées sur chaque `PlannerEvent` après le premier géocodage, puis réutilisées aux chargements suivants (plus d'appel Nominatim systématique)
+- Administration : suppression du géocodage Nominatim automatique au chargement de la carte Monde
+- Administration : lancement manuel du géocodage des événements planner depuis l'IHM, uniquement si le géocodage Nominatim est activé
+- Administration : suivi d'avancement en direct dans l'IHM (déjà géocodés, restants, total, progression du run courant, succès/échecs)
+- Administration : ajout d'un bouton **Stop** pour interrompre un traitement en cours
+- Administration : affichage des horodatages de début et de fin du dernier traitement
+- Administration : le traitement manuel de géocodage planner respecte la limite Nominatim gratuite avec **1 appel par seconde**, sans parallélisme sur les requêtes
+
+---
+
+## [2.3.0] - 2026-05-04
+
+### Nouveautés
+
+#### Récapitulatif voyage — histogramme quotidien dépliable
+
+- Ajout en bas de la page de détail voyage d'une section **dépliable** dédiée à l'analyse journalière des dépenses
+- Cette section affiche un **histogramme des dépenses par jour** sur toute la période du voyage
+- Ajout d'une **ligne horizontale de référence** correspondant au budget journalier prévu (`dailyExpenseBudget`) défini dans les paramètres du voyage
+- Rendu en graphique mixte (barres + ligne) via Chart.js, initialisé à l'ouverture de la section pour garder la page légère
+- Échelle Y du graphique quotidien calée à **budget journalier paramétré + 100%** (maximum = `dailyExpenseBudget × 2`) pour faciliter la lecture de l'écart
+
+### Correctifs
+
+#### Planner - commentaire vide conserve une valeur vide
+
+- La modale de modification d'un événement planner ne préremplit plus le champ commentaire avec `undefined` lorsqu'aucun commentaire n'existe
+- La sauvegarde normalise désormais les commentaires planner absents pour conserver une chaîne vide au lieu de persister `undefined`
+
+#### Bouton "Ici et maintenant" — prise en compte de l'heure locale du client
+
+- La date/heure de l'événement créé via le bouton **"Ici et maintenant"** utilise désormais l'heure locale du navigateur/mobile au lieu de l'heure du serveur
+- Corrige les décalages horaires lorsque l'utilisateur se trouve dans un fuseau horaire différent de celui du serveur
+
+---
+
 ## [2.2.0] - 2026-04-03
 
 ### Nouveautés

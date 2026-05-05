@@ -79,6 +79,8 @@ class ExpenseServiceTest {
 
         assertEquals(3, data.getLabels().size());
         assertEquals(List.of(100.0, 100.0, 100.0), data.getBudgetLine());
+        assertEquals(List.of(9.0, 10.0, 10.0), data.getDailyTotals());
+        assertEquals(List.of(10.0, 10.0, 10.0), data.getPlannedDailyLine());
         assertEquals(Arrays.asList(null, null, null), data.getActualCumulative());
         assertEquals(List.of(19.0, 39.0, 59.0), data.getTrendLine());
         assertEquals(List.of("T Transport"), data.getCategoryLabels());

@@ -89,6 +89,8 @@ class ImportExportWorkerTest {
                 .name("Check-in")
                 .eventDateTime(LocalDateTime.of(2026, 1, 1, 10, 0))
                 .location("Paris")
+                .latitude(48.8566)
+                .longitude(2.3522)
                 .comment("ok")
                 .trip(trip)
                 .build();
@@ -116,6 +118,8 @@ class ImportExportWorkerTest {
         assertEquals(1, payload.getTrips().size());
         assertEquals(1, payload.getExpenses().size());
         assertEquals(1, payload.getPlannerEvents().size());
+        assertEquals(48.8566, payload.getPlannerEvents().get(0).getLatitude());
+        assertEquals(2.3522, payload.getPlannerEvents().get(0).getLongitude());
         assertEquals(1, payload.getUsers().size());
     }
 
@@ -148,6 +152,8 @@ class ImportExportWorkerTest {
                         .name("Hotel")
                         .eventDateTime(LocalDateTime.of(2026, 2, 1, 20, 0))
                         .location("Paris")
+                        .latitude(48.8566)
+                        .longitude(2.3522)
                         .comment("Late")
                         .tripId(100L)
                         .build()))
@@ -182,6 +188,8 @@ class ImportExportWorkerTest {
         verify(plannerEventRepository).saveAll(plannerCaptor.capture());
         assertEquals(1, plannerCaptor.getValue().size());
         assertEquals(999L, plannerCaptor.getValue().get(0).getTrip().getId());
+        assertEquals(48.8566, plannerCaptor.getValue().get(0).getLatitude());
+        assertEquals(2.3522, plannerCaptor.getValue().get(0).getLongitude());
 
         verify(appUserRepository).deleteAll();
         verify(appUserRepository).save(argThat(u -> "reporter".equals(u.getUsername()) && "hash2".equals(u.getPassword())));

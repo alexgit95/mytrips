@@ -11,6 +11,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.TreeMap;
 import java.util.stream.Collectors;
 
@@ -44,6 +45,7 @@ public class PlannerEventService {
 
     @Transactional
     public PlannerEvent save(PlannerEvent event) {
+        event.setComment(normalizeComment(event.getComment()));
         return plannerEventRepository.save(event);
     }
 
@@ -52,21 +54,38 @@ public class PlannerEventService {
         Trip trip = tripRepository.findById(tripId)
                 .orElseThrow(() -> new IllegalArgumentException("Voyage introuvable : " + tripId));
         event.setTrip(trip);
+        if (event.getLocation() == null || event.getLocation().isBlank()) {
+            event.setLatitude(null);
+            event.setLongitude(null);
+        }
+        event.setComment(normalizeComment(event.getComment()));
         return plannerEventRepository.save(event);
     }
 
     @Transactional
     public PlannerEvent update(Long eventId, PlannerEvent updated) {
         PlannerEvent existing = findById(eventId);
+        boolean locationChanged = !Objects.equals(existing.getLocation(), updated.getLocation());
         existing.setName(updated.getName());
         existing.setEventDateTime(updated.getEventDateTime());
         existing.setLocation(updated.getLocation());
-        existing.setComment(updated.getComment());
+        if (locationChanged) {
+            existing.setLatitude(null);
+            existing.setLongitude(null);
+        }
+        existing.setComment(normalizeComment(updated.getComment()));
         return plannerEventRepository.save(existing);
     }
 
     @Transactional
     public void delete(Long eventId) {
         plannerEventRepository.deleteById(eventId);
+    }
+
+    static String normalizeComment(String comment) {
+        if (comment == null || "undefined".equals(comment)) {
+            return "";
+        }
+        return comment;
     }
 }

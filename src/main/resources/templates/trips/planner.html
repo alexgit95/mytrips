@@ -367,8 +367,8 @@
         eventsMap[span.dataset.id] = {
             name:     span.dataset.name,
             datetime: span.dataset.datetime,
-            location: span.dataset.location,
-            comment:  span.dataset.comment,
+            location: span.dataset.location ?? '',
+            comment:  span.dataset.comment ?? '',
             action:   span.dataset.action,
             commentAction: span.dataset.commentAction
         };
@@ -383,10 +383,10 @@
         const editForm = document.getElementById('editForm');
         if (!editForm) return;
 
-        document.getElementById('editName').value     = data.name;
-        document.getElementById('editDateTime').value = data.datetime;
-        document.getElementById('editLocation').value = data.location;
-        document.getElementById('editComment').value  = data.comment;
+        document.getElementById('editName').value     = data.name ?? '';
+        document.getElementById('editDateTime').value = data.datetime ?? '';
+        document.getElementById('editLocation').value = data.location ?? '';
+        document.getElementById('editComment').value  = data.comment ?? '';
         editForm.action = data.action;
 
         const modal = new bootstrap.Modal(document.getElementById('editModal'));
@@ -401,7 +401,7 @@
         const commentForm = document.getElementById('commentForm');
         if (!commentForm) return;
 
-        document.getElementById('commentText').value = data.comment;
+        document.getElementById('commentText').value = data.comment ?? '';
         commentForm.action = data.commentAction;
 
         const modal = new bootstrap.Modal(document.getElementById('commentModal'));
@@ -483,6 +483,15 @@
             params.append('latitude',  latitude);
             params.append('longitude', longitude);
         }
+
+        // Injecter la date/heure locale du mobile (format ISO sans timezone, ex: 2026-05-04T14:32)
+        const now = new Date();
+        const localDatetime = now.getFullYear() + '-'
+            + String(now.getMonth() + 1).padStart(2, '0') + '-'
+            + String(now.getDate()).padStart(2, '0') + 'T'
+            + String(now.getHours()).padStart(2, '0') + ':'
+            + String(now.getMinutes()).padStart(2, '0');
+        params.append('clientDateTime', localDatetime);
 
         fetch(`/trips/${tripId}/planner/events/here-and-now`, {
             method: 'POST',

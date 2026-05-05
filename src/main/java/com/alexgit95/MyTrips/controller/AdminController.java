@@ -5,7 +5,9 @@ import com.alexgit95.MyTrips.service.AppUserService;
 import com.alexgit95.MyTrips.service.ApiAccessKeyService;
 import com.alexgit95.MyTrips.service.CategoryService;
 import com.alexgit95.MyTrips.service.DataImportExportService;
+import com.alexgit95.MyTrips.service.ForwardGeocodingService;
 import com.alexgit95.MyTrips.service.GeoCountryResolver;
+import com.alexgit95.MyTrips.service.PlannerGeocodingBatchService;
 import com.alexgit95.MyTrips.service.ReverseGeocodingService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -32,6 +34,8 @@ public class AdminController {
 
     private final DataImportExportService dataService;
     private final CategoryService         categoryService;
+    private final ForwardGeocodingService forwardGeocodingService;
+    private final PlannerGeocodingBatchService plannerGeocodingBatchService;
     private final GeoCountryResolver      geoCountryResolver;
     private final ReverseGeocodingService reverseGeocodingService;
     private final AppUserService          appUserService;
@@ -42,9 +46,16 @@ public class AdminController {
 
     @GetMapping
     public String index(Model model) {
+        PlannerGeocodingBatchService.Progress geocodingBatchProgress = plannerGeocodingBatchService.getProgress();
+        long runTarget = geocodingBatchProgress.getRunTargetEvents();
+        long processed = geocodingBatchProgress.getProcessedInCurrentRun();
+        int geocodingBatchPercent = runTarget <= 0 ? 0 : (int) Math.min(100, (processed * 100) / runTarget);
+
         model.addAttribute("geoMode", geoCountryResolver.getMode());
         model.addAttribute("geoApiEnabled", geoCountryResolver.isApiEnabled());
         model.addAttribute("geocodingEnabled", reverseGeocodingService.isEnabled());
+        model.addAttribute("geocodingBatchProgress", geocodingBatchProgress);
+        model.addAttribute("geocodingBatchPercent", geocodingBatchPercent);
         model.addAttribute("appVersion", resolveAppVersion());
         model.addAttribute("apiKeys", apiAccessKeyService.findAllKeys());
         return "admin/index";
@@ -81,10 +92,46 @@ public class AdminController {
     @PostMapping("/reverse-geocoding")
     public String changeReverseGeocoding(@RequestParam("enabled") boolean enabled,
                                           RedirectAttributes ra) {
+        // Control both reverse and forward geocoding with the same property
+        // Both use Nominatim API and share the single GEOCODING_ENABLED flag
         reverseGeocodingService.setEnabled(enabled);
+        forwardGeocodingService.setEnabled(enabled);
         String label = enabled ? "Nominatim (adresses)" : "Désactivé (coordonnées GPS)";
         ra.addFlashAttribute("geocodingSuccess",
-                "Géocodage inverse changé en : " + label);
+                "Géocodage changé en : " + label);
+        return "redirect:/admin";
+    }
+
+    @PostMapping("/planner-geocoding/start")
+    public String startPlannerGeocodingBatch(RedirectAttributes ra) {
+        PlannerGeocodingBatchService.StartResult result = plannerGeocodingBatchService.startManualBatch();
+
+        if (result == PlannerGeocodingBatchService.StartResult.GEOCODING_DISABLED) {
+            ra.addFlashAttribute("geocodingBatchError",
+                    "Impossible de lancer: activez d'abord le geocodage Nominatim.");
+        } else if (result == PlannerGeocodingBatchService.StartResult.ALREADY_RUNNING) {
+            ra.addFlashAttribute("geocodingBatchInfo",
+                    "Un traitement est deja en cours.");
+        } else {
+            ra.addFlashAttribute("geocodingBatchSuccess",
+                    "Traitement de geocodage lance en arriere-plan.");
+        }
+
+        return "redirect:/admin";
+    }
+
+    @PostMapping("/planner-geocoding/stop")
+    public String stopPlannerGeocodingBatch(RedirectAttributes ra) {
+        PlannerGeocodingBatchService.StopResult result = plannerGeocodingBatchService.stopManualBatch();
+
+        if (result == PlannerGeocodingBatchService.StopResult.NOT_RUNNING) {
+            ra.addFlashAttribute("geocodingBatchInfo",
+                    "Aucun traitement en cours a interrompre.");
+        } else {
+            ra.addFlashAttribute("geocodingBatchInfo",
+                    "Demande d'arret envoyee. Le traitement va s'interrompre.");
+        }
+
         return "redirect:/admin";
     }
 

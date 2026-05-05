@@ -12,6 +12,8 @@
     <!-- Hidden chart data (JSON from server for Chart.js) -->
     <div id="chart-data"
          th:attr="data-labels=${chartLabelsJson},
+                   data-daily=${chartDailyJson},
+                   data-planned-daily=${chartPlannedDailyJson},
                   data-actual=${chartActualJson},
                   data-budget=${chartBudgetJson},
                   data-trend=${chartTrendJson},
@@ -217,6 +219,31 @@
         </div>
     </div>
 
+    <!-- Collapsible daily breakdown chart -->
+    <div class="card shadow-sm mt-4">
+        <div class="card-header p-0">
+            <button class="btn btn-link text-decoration-none w-100 text-start px-3 py-2 d-flex justify-content-between align-items-center"
+                    type="button"
+                    data-bs-toggle="collapse"
+                    data-bs-target="#dailyBreakdownCollapse"
+                    aria-expanded="false"
+                    aria-controls="dailyBreakdownCollapse">
+                <span class="fw-semibold text-dark">
+                    <i class="bi bi-bar-chart-line-fill me-2 text-primary"></i>Dépenses par jour et budget journalier prévu
+                </span>
+                <i id="dailyBreakdownChevron" class="bi bi-chevron-down transition-icon"></i>
+            </button>
+        </div>
+        <div id="dailyBreakdownCollapse" class="collapse">
+            <div class="card-body">
+                <p class="text-muted small mb-3">
+                    Histogramme des dépenses quotidiennes et ligne de référence basée sur le budget journalier paramétré du voyage.
+                </p>
+                <canvas id="dailyHistogramChart" style="max-height:320px"></canvas>
+            </div>
+        </div>
+    </div>
+
 </th:block>
 
 <th:block th:fragment="extraScripts">
@@ -227,6 +254,8 @@
     if (!chartDataEl) return;
 
     const labels       = JSON.parse(chartDataEl.dataset.labels  || '[]');
+    const dailyTotals  = JSON.parse(chartDataEl.dataset.daily || '[]');
+    const plannedDaily = JSON.parse(chartDataEl.dataset.plannedDaily || '[]');
     const actual       = JSON.parse(chartDataEl.dataset.actual  || '[]');
     const budget       = JSON.parse(chartDataEl.dataset.budget  || '[]');
     const trend        = JSON.parse(chartDataEl.dataset.trend   || '[]');
@@ -335,6 +364,83 @@
                 scales: {
                     y: yScaleConfig
                 }
+            }
+        });
+    }
+
+    // ---- COLLAPSIBLE DAILY HISTOGRAM ----
+    let dailyChart = null;
+    const dailyCollapseEl = document.getElementById('dailyBreakdownCollapse');
+    const dailyEl = document.getElementById('dailyHistogramChart');
+    const dailyChevronEl = document.getElementById('dailyBreakdownChevron');
+
+    const renderDailyChart = () => {
+        if (dailyChart || !dailyEl || labels.length === 0) return;
+
+        const plannedDailyValue = plannedDaily.find(v => typeof v === 'number' && !Number.isNaN(v)) || 0;
+        const yAxisMax = plannedDailyValue > 0 ? plannedDailyValue * 2 : undefined;
+
+        dailyChart = new Chart(dailyEl, {
+            data: {
+                labels: labels,
+                datasets: [
+                    {
+                        type: 'bar',
+                        label: 'Dépenses par jour',
+                        data: dailyTotals,
+                        backgroundColor: 'rgba(78,121,167,0.65)',
+                        borderColor: '#4e79a7',
+                        borderWidth: 1,
+                        borderRadius: 4,
+                        maxBarThickness: 24
+                    },
+                    {
+                        type: 'line',
+                        label: 'Prévu / jour (paramétrage)',
+                        data: plannedDaily,
+                        borderColor: '#e15759',
+                        borderWidth: 2,
+                        borderDash: [7, 4],
+                        pointRadius: 0,
+                        fill: false,
+                        tension: 0
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: ctx => ' ' + ctx.dataset.label + ' : ' + (ctx.parsed.y != null ? ctx.parsed.y.toFixed(2) + ' €' : '-')
+                        }
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: yAxisMax,
+                        ticks: { callback: v => v + ' €' }
+                    }
+                }
+            }
+        });
+    };
+
+    if (dailyCollapseEl) {
+        dailyCollapseEl.addEventListener('shown.bs.collapse', renderDailyChart);
+        dailyCollapseEl.addEventListener('shown.bs.collapse', () => {
+            if (dailyChevronEl) {
+                dailyChevronEl.classList.remove('bi-chevron-down');
+                dailyChevronEl.classList.add('bi-chevron-up');
+            }
+        });
+        dailyCollapseEl.addEventListener('hidden.bs.collapse', () => {
+            if (dailyChevronEl) {
+                dailyChevronEl.classList.remove('bi-chevron-up');
+                dailyChevronEl.classList.add('bi-chevron-down');
             }
         });
     }
