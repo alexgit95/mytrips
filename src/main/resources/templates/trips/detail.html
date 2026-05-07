@@ -55,6 +55,11 @@
                         <a th:href="@{/trips/{id}/planner(id=${trip.id})}" class="btn btn-outline-primary btn-sm">
                             <i class="bi bi-calendar-week me-1"></i>Planner
                         </a>
+                        <a th:if="${showRoadTripButton}"
+                           th:href="@{/trips/{id}/road-trip(id=${trip.id})}"
+                           class="btn btn-outline-warning btn-sm">
+                            <i class="bi bi-sign-turn-right me-1"></i>Road Trip
+                        </a>
                         <a th:if="${isAdmin}" th:href="@{/trips/{id}/expenses/new(id=${trip.id})}" class="btn btn-success btn-sm">
                             <i class="bi bi-plus-lg me-1"></i>Ajouter une dépense
                         </a>

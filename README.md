@@ -213,6 +213,7 @@ Page centrale d'un voyage comprenant :
 - **Graphique camembert** : répartition des dépenses par catégorie
 - **Graphique linéaire** : courbe d'évolution des dépenses avec ligne de budget et courbe de tendance (voir ci-dessous)
 - **Tableau des dépenses** : liste paginable avec date, libellé, catégorie, montant et boutons éditer/supprimer
+- **Bouton Road Trip** *(visible uniquement si le voyage est terminé et qu'il possède plus de 4 étapes géocodées)* : ouvre la vue carte de l'itinéraire (voir ci-dessous)
 
 #### Courbe de projection (tendance)
 
@@ -235,6 +236,34 @@ Formulaire d'ajout/édition avec : date, libellé, catégorie (icône + nom), mo
 ### Planner
 
 Planificateur d'événements par voyage. Chaque événement contient : date, heure, titre, description, localisation géographique (utilisée pour la résolution pays/département sur la page Monde). Les événements sont affichés sous forme de timeline verticale groupée par journée.
+
+### Road Trip
+
+La vue **Road Trip** est accessible depuis la page de détail d'un voyage **terminé** comptant **plus de 4 étapes géocodées** dans le planner.
+
+Elle affiche :
+
+- Une **carte OpenStreetMap interactive** avec tous les points GPS du voyage reliés dans l'ordre chronologique
+- Un **sélecteur de date (timeline)** permettant de filtrer la carte sur une journée précise — avec un bouton « 🗺 Tout le voyage » pour revenir à la vue complète
+- Un **itinéraire routier stylisé** avec dégradé de couleurs (orange → bleu) reprenant les routes réelles via l'API OSRM
+- Des **marqueurs numérotés** pour chaque étape avec popup (nom, localisation, date)
+- La **distance totale du trajet** calculée via OSRM (ou à vol d'oiseau si l'API est indisponible)
+- La **liste détaillée des étapes** avec numéro, nom, localisation et date
+
+#### Filtrage par pays d'origine
+
+Si le voyage **se déroule dans un pays différent du pays d'origine** configuré en administration, les étapes situées dans le pays d'origine sont traitées selon la règle suivante :
+
+| Nombre de points dans le pays d'origine | Comportement |
+|---|---|
+| **≤ 4** | Points exclus de la carte et du calcul de distance (simples escales de départ / retour) |
+| **> 4** | Tous les points affichés — le voyage est considéré comme un voyage multi-pays |
+
+Cela permet de gérer correctement :
+- Un **aller-retour à l'étranger** depuis la France (quelques étapes françaises ignorées)
+- Un **voyage à cheval entre deux pays** avec une part significative dans le pays d'origine (tous les points conservés)
+
+Le pays d'origine est configurable dans **Administration > Pays d'origine** (code ISO 3166-1 alpha-2, défaut : `FR` — France). Ce paramètre est inclus dans l'export/import JSON.
 
 ### Frise chronologique
 
@@ -285,12 +314,13 @@ La résolution géographique fonctionne en deux modes configurables depuis l'adm
 
 Accessible via le menu **Administration** (visible uniquement pour les administrateurs), regroupe :
 
-- **Export JSON** : téléchargement de l'intégralité des données (voyages, dépenses, événements, utilisateurs) au format JSON
+- **Export JSON** : téléchargement de l'intégralité des données (voyages, dépenses, événements, utilisateurs, paramètres) au format JSON
 - **Export JSON via API key** : génération et gestion de clés API temporaires pour appeler `GET /api/admin/export` avec le query param `apiKey` (voir ci-dessous)
-- **Import JSON** : rechargement complet depuis un fichier d'export (remplace toutes les données existantes, y compris les utilisateurs)
+- **Import JSON** : rechargement complet depuis un fichier d'export (remplace toutes les données existantes, y compris les utilisateurs et le pays d'origine)
 - **Import HopWallet** : import depuis un export CSV de l'application HopWallet (ajout aux données existantes)
 - **Catégories** : CRUD complet des catégories de dépenses (nom + icône emoji)
 - **Gestion des utilisateurs** : création et suppression d'utilisateurs avec attribution de rôles
+- **Pays d'origine** : configuration du pays d'origine (code ISO 3166-1 alpha-2, ex. `FR`) utilisé pour la fonctionnalité Road Trip — sauvegardé dans l'export/import JSON
 - **Résolution géographique** : bascule à chaud entre mode local et mode API BigDataCloud, sans redémarrage ; affiche le mode actuellement actif
 - **Géocodage planner manuel** : lancement à la demande du géocodage des événements planner depuis l'IHM admin (uniquement si Nominatim est activé), avec suivi en direct des compteurs (déjà géocodés, restants, total, progression), bouton **Stop**, et horodatages de début/fin du dernier traitement
 

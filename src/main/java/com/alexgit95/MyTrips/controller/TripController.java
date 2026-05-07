@@ -3,6 +3,7 @@ package com.alexgit95.MyTrips.controller;
 import com.alexgit95.MyTrips.dto.ChartDataDto;
 import com.alexgit95.MyTrips.model.Expense;
 import com.alexgit95.MyTrips.model.Trip;
+import com.alexgit95.MyTrips.repository.PlannerEventRepository;
 import com.alexgit95.MyTrips.service.CategoryService;
 import com.alexgit95.MyTrips.service.ExpenseService;
 import com.alexgit95.MyTrips.service.TripService;
@@ -28,10 +29,11 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TripController {
 
-    private final TripService       tripService;
-    private final ExpenseService    expenseService;
-    private final CategoryService   categoryService;
-    private final ObjectMapper      objectMapper;
+    private final TripService               tripService;
+    private final ExpenseService             expenseService;
+    private final CategoryService            categoryService;
+    private final PlannerEventRepository     plannerEventRepository;
+    private final ObjectMapper               objectMapper;
 
     // ---------------------------
     // Liste des voyages
@@ -229,6 +231,11 @@ public class TripController {
         model.addAttribute("chartTrendJson",   objectMapper.writeValueAsString(chartData.getTrendLine()));
         model.addAttribute("catLabelsJson",    objectMapper.writeValueAsString(chartData.getCategoryLabels()));
         model.addAttribute("catAmountsJson",   objectMapper.writeValueAsString(chartData.getCategoryAmounts()));
+
+        // Bouton Road Trip : visible si voyage terminé ET plus de 4 points GPS dans le planner
+        boolean tripFinished = today.isAfter(trip.getEndDate());
+        long plannerCoordsCount = plannerEventRepository.countByTripIdWithCoordinates(id);
+        model.addAttribute("showRoadTripButton", tripFinished && plannerCoordsCount > 4);
 
         return "trips/detail";
     }

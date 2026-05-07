@@ -54,6 +54,8 @@ class ImportExportWorkerTest {
     @Mock
     private CategoryService categoryService;
     @Mock
+    private AppSettingsService appSettingsService;
+    @Mock
     private ObjectMapper objectMapper;
 
     @InjectMocks
@@ -103,6 +105,7 @@ class ImportExportWorkerTest {
         when(plannerEventRepository.findAll()).thenReturn(List.of(event));
         when(appUserRepository.findAll()).thenReturn(List.of(user));
 
+        when(appSettingsService.getHomeCountry()).thenReturn("FR");
         ObjectWriter writer = mock(ObjectWriter.class);
         when(objectMapper.writerWithDefaultPrettyPrinter()).thenReturn(writer);
 
@@ -423,6 +426,7 @@ class ImportExportWorkerTest {
         when(plannerEventRepository.findAll()).thenReturn(List.of());
         when(appUserRepository.findAll()).thenReturn(List.of());
 
+        when(appSettingsService.getHomeCountry()).thenReturn("FR");
         ObjectWriter writer = mock(ObjectWriter.class);
         when(objectMapper.writerWithDefaultPrettyPrinter()).thenReturn(writer);
 

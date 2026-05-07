@@ -8,6 +8,7 @@ import com.alexgit95.MyTrips.service.DataImportExportService;
 import com.alexgit95.MyTrips.service.ForwardGeocodingService;
 import com.alexgit95.MyTrips.service.GeoCountryResolver;
 import com.alexgit95.MyTrips.service.PlannerGeocodingBatchService;
+import com.alexgit95.MyTrips.service.AppSettingsService;
 import com.alexgit95.MyTrips.service.ReverseGeocodingService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
@@ -40,6 +41,7 @@ public class AdminController {
     private final ReverseGeocodingService reverseGeocodingService;
     private final AppUserService          appUserService;
     private final ApiAccessKeyService     apiAccessKeyService;
+    private final AppSettingsService       appSettingsService;
     private final ObjectProvider<BuildProperties> buildPropertiesProvider;
     @Value("${app.version:}")
     private String configuredAppVersion;
@@ -58,6 +60,7 @@ public class AdminController {
         model.addAttribute("geocodingBatchPercent", geocodingBatchPercent);
         model.addAttribute("appVersion", resolveAppVersion());
         model.addAttribute("apiKeys", apiAccessKeyService.findAllKeys());
+        model.addAttribute("homeCountry", appSettingsService.getHomeCountry());
         return "admin/index";
     }
 
@@ -86,6 +89,20 @@ public class AdminController {
         String label = apiEnabled ? "API BigDataCloud" : "Local (hors-ligne)";
         ra.addFlashAttribute("geoModeSuccess",
                 "Mode de résolution géographique changé en : " + label);
+        return "redirect:/admin";
+    }
+
+    @PostMapping("/home-country")
+    public String changeHomeCountry(@RequestParam("homeCountry") String homeCountry,
+                                    RedirectAttributes ra) {
+        if (homeCountry == null || homeCountry.isBlank() || homeCountry.trim().length() > 3) {
+            ra.addFlashAttribute("homeCountryError",
+                    "Code pays invalide. Utilisez un code ISO 3166-1 alpha-2 (ex: FR, DE, IT).");
+            return "redirect:/admin";
+        }
+        appSettingsService.setHomeCountry(homeCountry.trim());
+        ra.addFlashAttribute("homeCountrySuccess",
+                "Pays d'origine mis à jour : " + homeCountry.trim().toUpperCase());
         return "redirect:/admin";
     }
 

@@ -43,6 +43,7 @@ public class ImportExportWorker {
     private final PlannerEventRepository plannerEventRepository;
     private final AppUserRepository appUserRepository;
     private final CategoryService categoryService;
+    private final AppSettingsService appSettingsService;
     private final ObjectMapper objectMapper;
 
     // ----------------------------------------------------------------
@@ -125,6 +126,7 @@ public class ImportExportWorker {
                     .expenses(expenseDtos)
                     .plannerEvents(plannerEventDtos)
                     .users(userDtos)
+                    .homeCountry(appSettingsService.getHomeCountry())
                     .build();
 
             objectMapper.writerWithDefaultPrettyPrinter()
@@ -330,6 +332,12 @@ public class ImportExportWorker {
                 System.out.println("[IMPORT] Utilisateurs importés : " + usersOk);
             } else {
                 System.out.println("[IMPORT] Aucun utilisateur à importer.");
+            }
+
+            // ===== ÉTAPE 6 : Restaurer le pays d'origine =====
+            if (data.getHomeCountry() != null && !data.getHomeCountry().isBlank()) {
+                appSettingsService.setHomeCountry(data.getHomeCountry());
+                System.out.println("[IMPORT] Pays d'origine restauré : " + data.getHomeCountry());
             }
 
             System.out.println("[IMPORT] Import terminé avec succès !");

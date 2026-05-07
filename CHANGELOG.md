@@ -7,6 +7,75 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.5.2] - 2026-05-05
+
+### Améliorations
+
+#### Road Trip — règle de filtrage du pays d'origine affinée
+
+- **Nouvelle règle de filtrage** pour les voyages à cheval entre le pays d'origine et un pays étranger :
+  - Si le nombre d'étapes dans le pays d'origine est **≤ 4** → ces points sont exclus (simples escales de départ / retour, comportement précédent)
+  - Si le nombre d'étapes dans le pays d'origine est **> 4** → tous les points sont affichés (voyage multi-pays significatif)
+- Le badge dans l'en-tête de la page Road Trip indique désormais :
+  - 🔵 « Points du pays d'origine exclus (N ≤ 4) » quand le filtrage s'applique
+  - 🟢 « Voyage multi-pays — tous les points affichés » quand le pays d'origine est présent en nombre suffisant
+- Exposition des attributs `homePointsFiltered` et `homeCountryPointCount` dans le modèle Thymeleaf
+
+---
+
+## [2.5.1] - 2026-05-05
+
+### Améliorations
+
+#### Road Trip — sélecteur de date (timeline)
+
+- Ajout d'une **barre de dates horizontale défilable** au-dessus de la carte Road Trip, générée automatiquement à partir des jours représentés dans les étapes du voyage
+- Un bouton **« 🗺 Tout le voyage »** (sélectionné par défaut) affiche l'itinéraire complet
+- Chaque bouton de date filtre la carte pour n'afficher que **les étapes et le trajet du jour sélectionné**, avec recalcul de la distance via OSRM
+- La liste des étapes sous la carte se met à jour en cohérence avec le filtre actif
+- Design : boutons pill scrollables avec état actif orange (jour) / bleu (tout), connecteurs visuels entre les dates
+
+---
+
+## [2.5.0] - 2026-05-05
+
+### Nouveautés
+
+#### Fonctionnalité Road Trip — carte d'itinéraire
+
+- Ajout d'un **bouton Road Trip** sur la page de détail d'un voyage, disponible uniquement si :
+  - Le voyage est **terminé** (date de fin antérieure à aujourd'hui)
+  - Le voyage possède **plus de 4 étapes géocodées** dans le planner
+- Nouveau panneau **Road Trip** (`/trips/{id}/road-trip`) affichant :
+  - Une **carte OpenStreetMap interactive** (Leaflet) avec tous les points GPS du voyage dans l'ordre chronologique
+  - Un **itinéraire routier** calculé via l'API OSRM (routage réel sur les routes), avec tracé en dégradé orange → bleu
+  - Des **marqueurs SVG numérotés** pour chaque étape avec popups (nom, localisation, date, badge départ/arrivée)
+  - Des **flèches directionnelles** le long de l'itinéraire pour indiquer le sens de parcours
+  - La **distance totale** du trajet en kilomètres (routière via OSRM, ou à vol d'oiseau si l'API est indisponible)
+  - Trois **cartes de statistiques** : distance totale, nombre d'étapes, durée du voyage
+  - La **liste détaillée des étapes** (numéro, nom, localisation, date)
+
+#### Pays d'origine configurable
+
+- Nouveau paramètre de configuration **Pays d'origine** dans l'administration (code ISO 3166-1 alpha-2, ex. `FR`, `DE`, `IT`)
+- Valeur par défaut : `FR` (France)
+- **Filtrage intelligent** sur la vue Road Trip : si le voyage se déroule dans un autre pays que le pays d'origine, les étapes situées dans le pays d'origine sont **automatiquement exclues** de la carte et du calcul de distance
+
+#### Export / Import du pays d'origine
+
+- Le champ `homeCountry` est désormais inclus dans l'export JSON (`ExportDto`)
+- Lors d'un import, la valeur `homeCountry` est restaurée si présente dans le fichier (compatibilité ascendante : les anciens exports sans ce champ restent importables)
+
+### Architecture
+
+- Nouvelle entité `AppSettings` (table `app_settings`, singleton id=1) pour stocker les paramètres globaux de l'application
+- Nouveau `AppSettingsRepository` et `AppSettingsService`
+- Nouveau `RoadTripController` gérant l'endpoint `GET /trips/{id}/road-trip`
+- Nouvelle méthode `PlannerEventRepository#countByTripIdWithCoordinates(Long tripId)`
+- Le pays d'origine est déterminé pour chaque point via le `GeoCountryResolver` existant (modes local et API)
+
+---
+
 ## [2.4.0]
 
 ### Nouveautés
