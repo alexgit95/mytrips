@@ -4,7 +4,6 @@ import com.alexgit95.MyTrips.dto.CountryStatsDto;
 import com.alexgit95.MyTrips.dto.TripMarkerDto;
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
-import com.alexgit95.MyTrips.repository.PlannerEventRepository;
 import com.alexgit95.MyTrips.repository.TripRepository;
 import lombok.RequiredArgsConstructor;
 import org.slf4j.Logger;
@@ -29,7 +28,7 @@ public class WorldStatsService {
     private static final Logger log = LoggerFactory.getLogger(WorldStatsService.class);
 
     private final TripRepository tripRepository;
-    private final PlannerEventRepository plannerEventRepository;
+    private final PlannerEventService plannerEventService;
     private final LocationParserService locationParser;
     private final GeoCountryResolver geoResolver;
 
@@ -64,8 +63,7 @@ public class WorldStatsService {
             }
 
             // ---- 3. Planner events (text location field) ----
-            List<PlannerEvent> events =
-                    plannerEventRepository.findByTripIdOrderByEventDateTimeAsc(trip.getId());
+            List<PlannerEvent> events = plannerEventService.findByTrip(trip.getId());
             for (PlannerEvent event : events) {
                 if (event.getLocation() != null && !event.getLocation().isBlank()) {
                     String eventLabel = "Étape : " + event.getName() + " (" + trip.getName() + ")";
@@ -157,7 +155,7 @@ public class WorldStatsService {
             log.info("Processing trip #{}: {} (id={})", tripIndex, trip.getName(), trip.getId());
 
             // Try to get planner events with locations
-            List<PlannerEvent> events = plannerEventRepository.findByTripIdOrderByEventDateTimeAsc(trip.getId());
+            List<PlannerEvent> events = plannerEventService.findByTrip(trip.getId());
             log.info("  - Found {} planner events for this trip", events.size());
             
             boolean hasEventMarker = false;

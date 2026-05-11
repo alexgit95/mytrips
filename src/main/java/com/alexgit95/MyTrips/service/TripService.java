@@ -13,7 +13,6 @@ import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class TripService {
 
     private final TripRepository tripRepository;
@@ -40,10 +39,12 @@ public class TripService {
                 .orElseThrow(() -> new EntityNotFoundException("Voyage introuvable : " + id));
     }
 
+    @Transactional
     public Trip save(Trip trip) {
         return tripRepository.save(trip);
     }
 
+    @Transactional
     public void delete(Long id) {
         tripRepository.deleteById(id);
     }

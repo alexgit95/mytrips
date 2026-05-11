@@ -13,6 +13,8 @@ import com.alexgit95.MyTrips.service.ReverseGeocodingService;
 import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.boot.info.BuildProperties;
 import org.springframework.beans.factory.annotation.Value;
@@ -32,6 +34,8 @@ import java.time.format.DateTimeFormatter;
 @RequestMapping("/admin")
 @RequiredArgsConstructor
 public class AdminController {
+
+    private static final Logger log = LoggerFactory.getLogger(AdminController.class);
 
     private final DataImportExportService dataService;
     private final CategoryService         categoryService;
@@ -313,7 +317,7 @@ public class AdminController {
                 out.flush();
             }
         } catch (Exception e) {
-            System.err.println("Erreur lors de l'export JSON : " + e.getMessage());
+            log.error("Erreur lors de l'export JSON", e);
             response.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR, "Erreur lors de l'export : " + e.getMessage());
         }
     }
@@ -329,12 +333,12 @@ public class AdminController {
             return "redirect:/admin";
         }
         try {
-            System.out.println("[CONTROLLER] Début de l'import...");
+            log.info("[CONTROLLER] Début de l'import...");
             dataService.importFromJson(file.getInputStream());
-            System.out.println("[CONTROLLER] Import réussi !");
+            log.info("[CONTROLLER] Import réussi !");
             ra.addFlashAttribute("success", "Import réussi ! Toutes les données ont été remplacées.");
         } catch (Exception e) {
-            System.err.println("[CONTROLLER] Erreur lors de l'import : " + e.getMessage());
+            log.error("[CONTROLLER] Erreur lors de l'import", e);
             ra.addFlashAttribute("error", "Erreur lors de l'import : " + e.getMessage());
         }
         return "redirect:/admin";

@@ -1,5 +1,6 @@
 package com.alexgit95.MyTrips.service;
 
+import com.alexgit95.MyTrips.dto.CategorySumDto;
 import com.alexgit95.MyTrips.dto.ChartDataDto;
 import com.alexgit95.MyTrips.model.CategoryEntity;
 import com.alexgit95.MyTrips.model.Expense;
@@ -73,7 +74,8 @@ class ExpenseServiceTest {
                 .build();
 
         when(expenseRepository.findByTripIdOrderByDateAsc(7L)).thenReturn(List.of(e1, e2));
-        when(expenseRepository.sumByCategory(7L)).thenReturn(Collections.singletonList(new Object[]{category, 29.0}));
+        when(expenseRepository.sumByCategory(7L)).thenReturn(Collections.singletonList(
+                new CategorySumDto(category, BigDecimal.valueOf(29))));
 
         ChartDataDto data = service.buildChartData(trip);
 

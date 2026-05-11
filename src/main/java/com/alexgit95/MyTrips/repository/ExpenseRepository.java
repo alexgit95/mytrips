@@ -1,6 +1,7 @@
 package com.alexgit95.MyTrips.repository;
 
 
+import com.alexgit95.MyTrips.dto.CategorySumDto;
 import com.alexgit95.MyTrips.model.Expense;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -18,8 +19,8 @@ public interface ExpenseRepository extends JpaRepository<Expense, Long> {
     @Query("SELECT COALESCE(SUM(e.amount), 0) FROM Expense e WHERE e.trip.id = :tripId")
     BigDecimal sumAmountByTripId(@Param("tripId") Long tripId);
 
-    @Query("SELECT e.category, SUM(e.amount) FROM Expense e WHERE e.trip.id = :tripId GROUP BY e.category")
-    List<Object[]> sumByCategory(@Param("tripId") Long tripId);
+    @Query("SELECT new com.alexgit95.MyTrips.dto.CategorySumDto(e.category, SUM(e.amount)) FROM Expense e WHERE e.trip.id = :tripId GROUP BY e.category")
+    List<CategorySumDto> sumByCategory(@Param("tripId") Long tripId);
 
     void deleteByTripId(Long tripId);
 }

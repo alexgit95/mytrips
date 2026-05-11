@@ -1,5 +1,6 @@
 package com.alexgit95.MyTrips.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -11,6 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class ExportDto {
     private List<CategoryExportDto> categories;
     private List<TripExportDto> trips;

@@ -3,7 +3,6 @@ package com.alexgit95.MyTrips.service;
 import com.alexgit95.MyTrips.dto.CountryStatsDto;
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
-import com.alexgit95.MyTrips.repository.PlannerEventRepository;
 import com.alexgit95.MyTrips.repository.TripRepository;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -26,7 +25,7 @@ class WorldStatsServiceTest {
     private TripRepository tripRepository;
 
     @Mock
-    private PlannerEventRepository plannerEventRepository;
+    private PlannerEventService plannerEventService;
 
     @Mock
     private GeoCountryResolver geoResolver;
@@ -60,13 +59,13 @@ class WorldStatsServiceTest {
                 .build();
 
         when(tripRepository.findAllByOrderByStartDateDesc()).thenReturn(List.of(trip));
-        when(plannerEventRepository.findByTripIdOrderByEventDateTimeAsc(1L)).thenReturn(List.of(event1, event2));
+        when(plannerEventService.findByTrip(1L)).thenReturn(List.of(event1, event2));
         when(geoResolver.resolve(48.8566, 2.3522)).thenReturn("FR");
         when(geoResolver.resolveSubdivision("FR", 48.8566, 2.3522)).thenReturn("Paris");
 
         WorldStatsService service = new WorldStatsService(
                 tripRepository,
-                plannerEventRepository,
+                plannerEventService,
                 locationParser,
                 geoResolver
         );
@@ -94,11 +93,11 @@ class WorldStatsServiceTest {
                 .build();
 
         when(tripRepository.findAllByOrderByStartDateDesc()).thenReturn(List.of(trip));
-        when(plannerEventRepository.findByTripIdOrderByEventDateTimeAsc(2L)).thenReturn(List.of());
+        when(plannerEventService.findByTrip(2L)).thenReturn(List.of());
 
         WorldStatsService service = new WorldStatsService(
                 tripRepository,
-                plannerEventRepository,
+                plannerEventService,
                 locationParser,
                 geoResolver
         );

@@ -3,7 +3,6 @@ package com.alexgit95.MyTrips.service;
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
 import com.alexgit95.MyTrips.repository.PlannerEventRepository;
-import com.alexgit95.MyTrips.repository.TripRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,20 +19,20 @@ import java.util.stream.Collectors;
 public class PlannerEventService {
 
     private final PlannerEventRepository plannerEventRepository;
-    private final TripRepository tripRepository;
+    private final TripService tripService;
 
+    @Transactional(readOnly = true)
     public List<PlannerEvent> findByTrip(Long tripId) {
         return plannerEventRepository.findByTripIdOrderByEventDateTimeAsc(tripId);
     }
 
+    @Transactional(readOnly = true)
     public PlannerEvent findById(Long id) {
         return plannerEventRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Événement introuvable : " + id));
     }
 
-    /**
-     * Group events by day (LocalDate), preserving chronological order.
-     */
+    @Transactional(readOnly = true)
     public Map<LocalDate, List<PlannerEvent>> groupByDay(Long tripId) {
         return findByTrip(tripId).stream()
                 .collect(Collectors.groupingBy(
@@ -41,6 +40,11 @@ public class PlannerEventService {
                         TreeMap::new,
                         Collectors.toList()
                 ));
+    }
+
+    @Transactional(readOnly = true)
+    public long countWithCoordinates(Long tripId) {
+        return plannerEventRepository.countByTripIdWithCoordinates(tripId);
     }
 
     @Transactional
@@ -51,8 +55,7 @@ public class PlannerEventService {
 
     @Transactional
     public PlannerEvent create(Long tripId, PlannerEvent event) {
-        Trip trip = tripRepository.findById(tripId)
-                .orElseThrow(() -> new IllegalArgumentException("Voyage introuvable : " + tripId));
+        Trip trip = tripService.findById(tripId);
         event.setTrip(trip);
         if (event.getLocation() == null || event.getLocation().isBlank()) {
             event.setLatitude(null);

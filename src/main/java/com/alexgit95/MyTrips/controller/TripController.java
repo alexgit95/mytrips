@@ -3,9 +3,9 @@ package com.alexgit95.MyTrips.controller;
 import com.alexgit95.MyTrips.dto.ChartDataDto;
 import com.alexgit95.MyTrips.model.Expense;
 import com.alexgit95.MyTrips.model.Trip;
-import com.alexgit95.MyTrips.repository.PlannerEventRepository;
 import com.alexgit95.MyTrips.service.CategoryService;
 import com.alexgit95.MyTrips.service.ExpenseService;
+import com.alexgit95.MyTrips.service.PlannerEventService;
 import com.alexgit95.MyTrips.service.TripService;
 import tools.jackson.databind.ObjectMapper;
 import jakarta.validation.Valid;
@@ -32,7 +32,7 @@ public class TripController {
     private final TripService               tripService;
     private final ExpenseService             expenseService;
     private final CategoryService            categoryService;
-    private final PlannerEventRepository     plannerEventRepository;
+    private final PlannerEventService        plannerEventService;
     private final ObjectMapper               objectMapper;
 
     // ---------------------------
@@ -186,7 +186,7 @@ public class TripController {
         
         // Vérifier si le voyage est toujours en cours
         java.time.LocalDate today = java.time.LocalDate.now();
-        boolean isTripsOngoing = today.isBefore(trip.getEndDate()) || today.isEqual(trip.getEndDate());
+        boolean isTripsOngoing = trip.isOngoing();
         
         // Total payé visible uniquement si le voyage est en cours
         BigDecimal totalPaid = isTripsOngoing ? expenses.stream()
@@ -199,9 +199,7 @@ public class TripController {
         java.time.LocalDate from = today.isAfter(trip.getStartDate()) ? today : trip.getStartDate();
         long remainingDays = java.time.temporal.ChronoUnit.DAYS.between(from, trip.getEndDate()) + 1;
         if (remainingDays < 1) remainingDays = 1;
-        java.math.BigDecimal perDayRemaining = remaining.compareTo(java.math.BigDecimal.ZERO) >= 0
-                ? remaining.divide(java.math.BigDecimal.valueOf(remainingDays), 2, java.math.RoundingMode.HALF_UP)
-                : remaining.divide(java.math.BigDecimal.valueOf(remainingDays), 2, java.math.RoundingMode.HALF_UP);
+        java.math.BigDecimal perDayRemaining = remaining.divide(java.math.BigDecimal.valueOf(remainingDays), 2, java.math.RoundingMode.HALF_UP);
 
         boolean belowThreshold = false;
         if (trip.getDailyBudgetThreshold() != null && trip.getDailyBudgetThreshold().compareTo(java.math.BigDecimal.ZERO) > 0) {
@@ -234,7 +232,7 @@ public class TripController {
 
         // Bouton Road Trip : visible si voyage terminé ET plus de 4 points GPS dans le planner
         boolean tripFinished = today.isAfter(trip.getEndDate());
-        long plannerCoordsCount = plannerEventRepository.countByTripIdWithCoordinates(id);
+        long plannerCoordsCount = plannerEventService.countWithCoordinates(id);
         model.addAttribute("showRoadTripButton", tripFinished && plannerCoordsCount > 4);
 
         return "trips/detail";

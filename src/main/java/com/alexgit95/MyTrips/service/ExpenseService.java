@@ -1,7 +1,7 @@
 package com.alexgit95.MyTrips.service;
 
+import com.alexgit95.MyTrips.dto.CategorySumDto;
 import com.alexgit95.MyTrips.dto.ChartDataDto;
-import com.alexgit95.MyTrips.model.CategoryEntity;
 import com.alexgit95.MyTrips.model.Expense;
 import com.alexgit95.MyTrips.model.Trip;
 import com.alexgit95.MyTrips.repository.ExpenseRepository;
@@ -18,7 +18,6 @@ import java.util.*;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class ExpenseService {
 
     private final ExpenseRepository expenseRepository;
@@ -39,10 +38,12 @@ public class ExpenseService {
         return expenseRepository.sumAmountByTripId(tripId);
     }
 
+    @Transactional
     public Expense save(Expense expense) {
         return expenseRepository.save(expense);
     }
 
+    @Transactional
     public void delete(Long id) {
         expenseRepository.deleteById(id);
     }
@@ -53,7 +54,7 @@ public class ExpenseService {
     @Transactional(readOnly = true)
     public ChartDataDto buildChartData(Trip trip) {
 
-        List<Expense> expenses = expenseRepository.findByTripIdOrderByDateAsc(trip.getId());
+        List<Expense> expenses = findByTrip(trip.getId());
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("dd/MM");
 
         LocalDate start = trip.getStartDate();
@@ -89,7 +90,6 @@ public class ExpenseService {
         List<Double> plannedDailyLine = new ArrayList<>();
 
         double cumul = 0.0;
-        LocalDate lastActualDay = null;
         double lastCumul = 0.0;
         int lastActualIdx = -1;
 
@@ -105,7 +105,6 @@ public class ExpenseService {
             if (!day.isAfter(today)) {
                 cumul += dailyExpense.getOrDefault(day, 0.0);
                 actualCumulative.add(cumul);
-                lastActualDay = day;
                 lastCumul = cumul;
                 lastActualIdx = i;
             } else {
@@ -146,14 +145,12 @@ public class ExpenseService {
         }
 
         // Pie data: sum by category
-        List<Object[]> catSums = expenseRepository.sumByCategory(trip.getId());
+        List<CategorySumDto> catSums = expenseRepository.sumByCategory(trip.getId());
         List<String> categoryLabels  = new ArrayList<>();
         List<Double> categoryAmounts = new ArrayList<>();
-        for (Object[] row : catSums) {
-            CategoryEntity cat = (CategoryEntity) row[0];
-            double   amt = ((Number) row[1]).doubleValue();
-            categoryLabels.add(cat.getIcon() + " " + cat.getName());
-            categoryAmounts.add(amt);
+        for (CategorySumDto row : catSums) {
+            categoryLabels.add(row.category().getIcon() + " " + row.category().getName());
+            categoryAmounts.add(row.amount().doubleValue());
         }
 
         return ChartDataDto.builder()
