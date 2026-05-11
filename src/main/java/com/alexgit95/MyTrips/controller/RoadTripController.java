@@ -1,25 +1,26 @@
 package com.alexgit95.MyTrips.controller;
 
-import com.alexgit95.MyTrips.model.PlannerEvent;
-import com.alexgit95.MyTrips.model.Trip;
-import com.alexgit95.MyTrips.service.AppSettingsService;
-import com.alexgit95.MyTrips.service.GeoCountryResolver;
-import com.alexgit95.MyTrips.service.PlannerEventService;
-import com.alexgit95.MyTrips.service.TripService;
-import tools.jackson.databind.ObjectMapper;
-import lombok.RequiredArgsConstructor;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 
-import java.time.LocalDate;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
+import com.alexgit95.MyTrips.model.PlannerEvent;
+import com.alexgit95.MyTrips.model.Trip;
+import com.alexgit95.MyTrips.service.AppSettingsService;
+import com.alexgit95.MyTrips.service.GeoCountryResolver;
+import com.alexgit95.MyTrips.service.PlannerEventService;
+import com.alexgit95.MyTrips.service.TripService;
+
+import lombok.RequiredArgsConstructor;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Contrôleur pour la vue Road Trip d'un voyage.

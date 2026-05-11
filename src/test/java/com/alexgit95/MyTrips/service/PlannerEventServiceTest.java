@@ -3,7 +3,7 @@ package com.alexgit95.MyTrips.service;
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
 import com.alexgit95.MyTrips.repository.PlannerEventRepository;
-import com.alexgit95.MyTrips.repository.TripRepository;
+import com.alexgit95.MyTrips.service.TripService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -26,7 +26,7 @@ class PlannerEventServiceTest {
     private PlannerEventRepository plannerEventRepository;
 
     @Mock
-    private TripRepository tripRepository;
+    private TripService tripService;
 
     @InjectMocks
     private PlannerEventService service;
@@ -63,7 +63,7 @@ class PlannerEventServiceTest {
                 .build();
         Trip trip = Trip.builder().id(3L).build();
 
-        when(tripRepository.findById(3L)).thenReturn(Optional.of(trip));
+        when(tripService.findById(3L)).thenReturn(trip);
         when(plannerEventRepository.save(event)).thenReturn(event);
 
         service.create(3L, event);

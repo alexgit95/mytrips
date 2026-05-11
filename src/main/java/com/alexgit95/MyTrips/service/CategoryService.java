@@ -11,7 +11,6 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-@Transactional
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
@@ -27,15 +26,18 @@ public class CategoryService {
                 .orElseThrow(() -> new EntityNotFoundException("Catégorie introuvable : " + id));
     }
 
+    @Transactional(readOnly = true)
     public CategoryEntity findByName(String name) {
         return categoryRepository.findByName(name)
                 .orElseThrow(() -> new EntityNotFoundException("Catégorie introuvable : " + name));
     }
 
+    @Transactional
     public CategoryEntity save(CategoryEntity category) {
         return categoryRepository.save(category);
     }
 
+    @Transactional
     public void delete(Long id) {
         CategoryEntity cat = findById(id);
         if (Boolean.FALSE.equals(cat.getEditable())) {
@@ -44,7 +46,7 @@ public class CategoryService {
         categoryRepository.deleteById(id);
     }
 
-    // Initialiser les catégories par défaut si absent
+    @Transactional
     public void initializeDefaultCategories() {
         if (categoryRepository.count() == 0) {
             categoryRepository.saveAll(List.of(

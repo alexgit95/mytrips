@@ -19,6 +19,8 @@ import com.alexgit95.MyTrips.repository.TripRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
@@ -37,6 +39,8 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class ImportExportWorker {
 
+    private static final Logger log = LoggerFactory.getLogger(ImportExportWorker.class);
+
     private final CategoryRepository categoryRepository;
     private final TripRepository tripRepository;
     private final ExpenseRepository expenseRepository;
@@ -51,7 +55,7 @@ public class ImportExportWorker {
     // ----------------------------------------------------------------
     public void exportToJson(OutputStream out) throws IOException {
         try {
-            System.out.println("[EXPORT] Démarrage de l'export JSON...");
+            log.info("[EXPORT] Démarrage de l'export JSON...");
 
             // Exporter uniquement les catégories custom (editable=true)
             List<CategoryEntity> customCategories = categoryRepository.findAll()
@@ -63,11 +67,11 @@ public class ImportExportWorker {
             List<Expense> expenses = expenseRepository.findAll();
             List<PlannerEvent> plannerEvents = plannerEventRepository.findAll();
             List<AppUser> users = appUserRepository.findAll();
-            System.out.println("[EXPORT] Catégories custom trouvées : " + customCategories.size());
-            System.out.println("[EXPORT] Voyages trouvés : " + trips.size());
-            System.out.println("[EXPORT] Dépenses trouvées : " + expenses.size());
-            System.out.println("[EXPORT] Événements planner trouvés : " + plannerEvents.size());
-            System.out.println("[EXPORT] Utilisateurs trouvés : " + users.size());
+            log.info("[EXPORT] Catégories custom trouvées : {}", customCategories.size());
+            log.info("[EXPORT] Voyages trouvés : {}", trips.size());
+            log.info("[EXPORT] Dépenses trouvées : {}", expenses.size());
+            log.info("[EXPORT] Événements planner trouvés : {}", plannerEvents.size());
+            log.info("[EXPORT] Utilisateurs trouvés : {}", users.size());
 
             List<CategoryExportDto> categoryDtos = customCategories.stream()
                     .map(c -> CategoryExportDto.builder()
@@ -119,7 +123,7 @@ public class ImportExportWorker {
                             .build())
                     .toList();
 
-            System.out.println("[EXPORT] Sérialisation des DTOs...");
+            log.info("[EXPORT] Sérialisation des DTOs...");
             ExportDto exportData = ExportDto.builder()
                     .categories(categoryDtos)
                     .trips(tripDtos)
@@ -133,10 +137,9 @@ public class ImportExportWorker {
                     .writeValue(out, exportData);
 
             out.flush();
-            System.out.println("[EXPORT] Export terminé avec succès !");
+            log.info("[EXPORT] Export terminé avec succès !");
         } catch (Exception e) {
-            System.err.println("[EXPORT] Erreur lors de l'export : " + e.getMessage());
-            e.printStackTrace();
+            log.error("[EXPORT] Erreur lors de l'export", e);
             throw e;
         }
     }
@@ -147,7 +150,7 @@ public class ImportExportWorker {
     public void importFromJson(InputStream in) throws IOException {
         try {
             ExportDto data = objectMapper.readValue(in, ExportDto.class);
-            System.out.println("[IMPORT] Données JSON lues avec succès");
+            log.info("[IMPORT] Données JSON lues avec succès");
 
             List<CategoryExportDto> categories = data.getCategories() != null ? data.getCategories() : List.of();
             List<TripExportDto> trips = data.getTrips() != null ? data.getTrips() : List.of();
@@ -156,14 +159,14 @@ public class ImportExportWorker {
             List<UserExportDto> users = data.getUsers() != null ? data.getUsers() : List.of();
 
             // Suppression UNIQUEMENT des dépenses, événements planner et voyages (pas les catégories)
-            System.out.println("[IMPORT] Suppression des données existantes...");
+            log.info("[IMPORT] Suppression des données existantes...");
             plannerEventRepository.deleteAll();
             expenseRepository.deleteAll();
             tripRepository.deleteAll();
-            System.out.println("[IMPORT] Nettoyage terminé");
+            log.info("[IMPORT] Nettoyage terminé");
 
             // ===== ÉTAPE 1 : Importer les catégories EN PREMIER (upsert: créer si absent) =====
-            System.out.println("[IMPORT] Importation des catégories...");
+            log.info("[IMPORT] Importation des catégories...");
             Map<String, CategoryEntity> categoryByName = new HashMap<>();
 
             if (!categories.isEmpty()) {
@@ -172,7 +175,7 @@ public class ImportExportWorker {
                         // Chercher d'abord si la catégorie existe
                         CategoryEntity existing = categoryService.findByName(catDto.getName());
                         categoryByName.put(catDto.getName(), existing);
-                        System.out.println("[IMPORT] Catégorie existante (réutilisée) : " + catDto.getName());
+                        log.info("[IMPORT] Catégorie existante (réutilisée) : {}", catDto.getName());
                     } catch (EntityNotFoundException e) {
                         // Créer seulement si elle n'existe pas
                         try {
@@ -185,19 +188,18 @@ public class ImportExportWorker {
                             CategoryEntity saved = categoryRepository.save(newCategory);
                             categoryRepository.flush();
                             categoryByName.put(catDto.getName(), saved);
-                            System.out.println("[IMPORT] Catégorie créée : " + catDto.getName());
+                            log.info("[IMPORT] Catégorie créée : {}", catDto.getName());
                         } catch (Exception ex) {
-                            System.err.println("[IMPORT] Erreur lors de la création de la catégorie " + catDto.getName() + " : " + ex.getMessage());
-                            ex.printStackTrace();
+                            log.error("[IMPORT] Erreur lors de la création de la catégorie {}", catDto.getName(), ex);
                             throw new IOException("Erreur lors de la création de la catégorie : " + ex.getMessage(), ex);
                         }
                     }
                 }
             }
-            System.out.println("[IMPORT] Catégories importées/réutilisées : " + categoryByName.size());
+            log.info("[IMPORT] Catégories importées/réutilisées : {}", categoryByName.size());
 
             // ===== ÉTAPE 2 : Créer les voyages =====
-            System.out.println("[IMPORT] Importation des voyages...");
+            log.info("[IMPORT] Importation des voyages...");
             Map<Long, Trip> tripById = new HashMap<>();
             try {
                 for (TripExportDto dto : trips) {
@@ -212,21 +214,19 @@ public class ImportExportWorker {
                                 .build());
                         tripById.put(dto.getId(), saved);
                     } catch (Exception ex) {
-                        System.err.println("[IMPORT] Erreur lors de la création du voyage " + dto.getName() + " : " + ex.getMessage());
-                        ex.printStackTrace();
+                        log.error("[IMPORT] Erreur lors de la création du voyage {}", dto.getName(), ex);
                         throw new IOException("Erreur lors de l'import voyage : " + ex.getMessage(), ex);
                     }
                 }
                 tripRepository.flush();
-                System.out.println("[IMPORT] Voyages importés : " + tripById.size());
+                log.info("[IMPORT] Voyages importés : {}", tripById.size());
             } catch (Exception ex) {
-                System.err.println("[IMPORT] Erreur générale lors de l'importation des voyages : " + ex.getMessage());
-                ex.printStackTrace();
+                log.error("[IMPORT] Erreur générale lors de l'importation des voyages", ex);
                 throw new IOException("Erreur lors de l'importation des voyages : " + ex.getMessage(), ex);
             }
 
             // ===== ÉTAPE 3 : Créer les dépenses avec les catégories importées =====
-            System.out.println("[IMPORT] Importation des dépenses...");
+            log.info("[IMPORT] Importation des dépenses...");
             List<Expense> toSave = new ArrayList<>();
             int dépensesOk = 0;
             int dépensesErreur = 0;
@@ -235,7 +235,7 @@ public class ImportExportWorker {
                 for (ExpenseExportDto dto : expenses) {
                     Trip trip = tripById.get(dto.getTripId());
                     if (trip == null) {
-                        System.err.println("[IMPORT] Voyage non trouvé pour l'expense (tripId: " + dto.getTripId() + ")");
+                        log.warn("[IMPORT] Voyage non trouvé pour l'expense (tripId: {})", dto.getTripId());
                         dépensesErreur++;
                         continue;
                     }
@@ -247,7 +247,7 @@ public class ImportExportWorker {
                             try {
                                 category = categoryService.findByName(dto.getCategoryName());
                             } catch (EntityNotFoundException e2) {
-                                System.err.println("[IMPORT] Catégorie non trouvée : " + dto.getCategoryName());
+                                log.warn("[IMPORT] Catégorie non trouvée : {}", dto.getCategoryName());
                                 dépensesErreur++;
                                 continue;
                             }
@@ -261,7 +261,7 @@ public class ImportExportWorker {
                                 .trip(trip).build());
                         dépensesOk++;
                     } catch (Exception ex) {
-                        System.err.println("[IMPORT] Erreur lors de la création d'une dépense : " + ex.getMessage());
+                        log.error("[IMPORT] Erreur lors de la création d'une dépense", ex);
                         dépensesErreur++;
                     }
                 }
@@ -269,15 +269,14 @@ public class ImportExportWorker {
                 System.out.println("[IMPORT] Sauvegarde de " + toSave.size() + " dépenses...");
                 expenseRepository.saveAll(toSave);
                 expenseRepository.flush();
-                System.out.println("[IMPORT] Dépenses en mémoire (OK: " + dépensesOk + ", Erreurs: " + dépensesErreur + ")");
+                log.info("[IMPORT] Dépenses en mémoire (OK: {}, Erreurs: {})", dépensesOk, dépensesErreur);
             } catch (Exception ex) {
-                System.err.println("[IMPORT] Erreur lors de l'importation des dépenses : " + ex.getMessage());
-                ex.printStackTrace();
+                log.error("[IMPORT] Erreur lors de l'importation des dépenses", ex);
                 throw new IOException("Erreur lors de l'importation des dépenses : " + ex.getMessage(), ex);
             }
 
             // ===== ÉTAPE 4 : Créer les événements planner =====
-            System.out.println("[IMPORT] Importation des événements planner...");
+            log.info("[IMPORT] Importation des événements planner...");
             if (!plannerEvents.isEmpty()) {
                 List<PlannerEvent> plannerEventsToSave = new ArrayList<>();
                 int plannerOk = 0;
@@ -285,7 +284,7 @@ public class ImportExportWorker {
                 for (PlannerEventExportDto dto : plannerEvents) {
                     Trip trip = tripById.get(dto.getTripId());
                     if (trip == null) {
-                        System.err.println("[IMPORT] Voyage non trouvé pour l'événement planner (tripId: " + dto.getTripId() + ")");
+                        log.warn("[IMPORT] Voyage non trouvé pour l'événement planner (tripId: {})", dto.getTripId());
                         plannerErreur++;
                         continue;
                     }
@@ -302,13 +301,13 @@ public class ImportExportWorker {
                 }
                 plannerEventRepository.saveAll(plannerEventsToSave);
                 plannerEventRepository.flush();
-                System.out.println("[IMPORT] Événements planner importés (OK: " + plannerOk + ", Erreurs: " + plannerErreur + ")");
+                log.info("[IMPORT] Événements planner importés (OK: {}, Erreurs: {})", plannerOk, plannerErreur);
             } else {
-                System.out.println("[IMPORT] Aucun événement planner à importer.");
+                log.info("[IMPORT] Aucun événement planner à importer.");
             }
 
             // ===== ÉTAPE 5 : Importer les utilisateurs =====
-            System.out.println("[IMPORT] Importation des utilisateurs...");
+            log.info("[IMPORT] Importation des utilisateurs...");
             if (!users.isEmpty()) {
                 // Supprimer tous les utilisateurs existants et les remplacer
                 appUserRepository.deleteAll();
@@ -323,31 +322,29 @@ public class ImportExportWorker {
                                 .build();
                         appUserRepository.save(user);
                         usersOk++;
-                        System.out.println("[IMPORT] Utilisateur importé : " + dto.getUsername() + " (" + dto.getRole() + ")");
+                        log.info("[IMPORT] Utilisateur importé : {} ({})", dto.getUsername(), dto.getRole());
                     } catch (Exception ex) {
-                        System.err.println("[IMPORT] Erreur lors de l'import de l'utilisateur " + dto.getUsername() + " : " + ex.getMessage());
+                        log.error("[IMPORT] Erreur lors de l'import de l'utilisateur {}", dto.getUsername(), ex);
                     }
                 }
                 appUserRepository.flush();
-                System.out.println("[IMPORT] Utilisateurs importés : " + usersOk);
+                log.info("[IMPORT] Utilisateurs importés : {}", usersOk);
             } else {
-                System.out.println("[IMPORT] Aucun utilisateur à importer.");
+                log.info("[IMPORT] Aucun utilisateur à importer.");
             }
 
             // ===== ÉTAPE 6 : Restaurer le pays d'origine =====
             if (data.getHomeCountry() != null && !data.getHomeCountry().isBlank()) {
                 appSettingsService.setHomeCountry(data.getHomeCountry());
-                System.out.println("[IMPORT] Pays d'origine restauré : " + data.getHomeCountry());
+                log.info("[IMPORT] Pays d'origine restauré : {}", data.getHomeCountry());
             }
 
-            System.out.println("[IMPORT] Import terminé avec succès !");
+            log.info("[IMPORT] Import terminé avec succès !");
         } catch (IOException e) {
-            System.err.println("[IMPORT] Erreur IOException : " + e.getMessage());
-            e.printStackTrace();
+            log.error("[IMPORT] Erreur IOException", e);
             throw e;
         } catch (Exception e) {
-            System.err.println("[IMPORT] Erreur inattendue : " + e.getMessage());
-            e.printStackTrace();
+            log.error("[IMPORT] Erreur inattendue", e);
             throw new IOException("Erreur critique lors de l'import : " + e.getMessage(), e);
         }
     }
