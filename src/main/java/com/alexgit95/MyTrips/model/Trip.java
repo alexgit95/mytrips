@@ -69,6 +69,12 @@ public class Trip {
     @EqualsAndHashCode.Exclude
     private List<PlannerEvent> plannerEvents = new ArrayList<>();
 
+    @OneToMany(mappedBy = "trip", cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
+    @Builder.Default
+    @ToString.Exclude
+    @EqualsAndHashCode.Exclude
+    private List<Accommodation> accommodations = new ArrayList<>();
+
     /**
      * Vérifier si le voyage est en cours (entre startDate et endDate, aujourd'hui)
      */

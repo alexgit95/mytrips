@@ -7,6 +7,70 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.8.0] - 2026-05-12
+
+### Nouveautés
+
+#### Logements — sélecteur de position sur carte OpenStreetMap
+
+- Ajout d'un **bouton 🌍** à côté du champ « Adresse » dans le formulaire de création et d'édition d'un logement
+- Un clic ouvre une **modale plein-écran (responsive)** avec une carte interactive **OpenStreetMap via Leaflet**, identique à celle du planner
+- L'utilisateur peut :
+  - **Cliquer sur la carte** pour placer un marqueur et capturer latitude / longitude
+  - **Déplacer le marqueur** par glisser-déposer pour affiner la position
+  - Utiliser le bouton **« Ma position »** pour centrer la carte sur sa géolocalisation GPS actuelle
+  - **Confirmer** la sélection pour renseigner automatiquement les coordonnées dans le formulaire
+- Les coordonnées s'affichent dans une **pastille verte** sous le champ d'adresse, avec un bouton pour les effacer
+- La carte se **réouvre centrée** sur les coordonnées déjà enregistrées lors d'une modification
+- Les champs de saisie manuelle latitude/longitude sont remplacés par ce sélecteur cartographique
+
+#### Road Trip — itinéraire aller-retour depuis le logement
+
+- Quand un **jour précis** est sélectionné dans la timeline et qu'un **logement géocodé** est actif ce jour-là, l'itinéraire intègre automatiquement le logement comme **point de départ et de retour**
+- La route calculée est : **logement → étape 1 → … → étape N → logement**
+- La distance affichée est la **distance aller-retour totale depuis le logement**
+- La **liste des étapes** affiche le logement en tête et en queue avec un badge violet **🛏 Logement**
+- Fonctionne avec un seul waypoint planner (logement → waypoint → logement)
+- En vue **« Tout le voyage »**, le comportement est inchangé (pas de bouclage sur logement)
+- La note de distance précise « Aller-retour depuis le logement · distance routière via OSRM »
+
+---
+
+## [2.7.0] - 2026-05-12
+
+### Nouveautés
+
+#### Logements par voyage
+
+- Ajout d'une entité **`Accommodation`** (logement) liée à chaque voyage (relation OneToMany)
+- Chaque logement contient : **nom** (obligatoire), **adresse**, **date d'arrivée**, **date de départ**, **coordonnées GPS** (latitude/longitude) et **commentaire**
+- Nouvelle page **`/trips/{id}/accommodations`** (bouton 🏠 sur la page de détail du voyage) permettant de :
+  - Lister tous les logements du voyage ordonnés par date d'arrivée
+  - Ajouter un logement (ADMIN)
+  - Modifier un logement (ADMIN)
+  - Supprimer un logement (ADMIN)
+
+#### Planner — affichage du logement actif par jour
+
+- Dans la **timeline du planner**, chaque journée affiche désormais un **badge 🏠 violet** indiquant le logement actif ce jour-là (règle : `arrivalDate ≤ jour < departureDate`)
+- Si une adresse est renseignée, elle s'affiche à côté du nom du logement dans le badge
+- Compatibilité null-safe : si aucun logement n'est défini, la timeline s'affiche normalement
+
+#### Road Trip — marqueurs maison sur la carte
+
+- Les logements possédant des **coordonnées GPS** (lat/lng) sont affichés sur la carte Road Trip sous forme de **marqueurs violets 🏠**
+- Chaque popup de marqueur maison affiche : nom, adresse (si disponible), plage de dates (arrivée → départ), commentaire
+- Les marqueurs maison sont **filtrés par période** lors du filtrage par jour (seuls les logements dont la plage chevauche les dates visibles sont affichés)
+- Si aucun waypoint n'est disponible mais que des logements géocodés existent, la carte se centre sur ces logements
+
+#### Export / Import JSON
+
+- L'export JSON inclut désormais un tableau `accommodations` avec tous les logements de tous les voyages
+- L'import JSON restaure les logements et les associe aux voyages correspondants
+- Compatibilité ascendante préservée : les anciens fichiers JSON sans `accommodations` sont importés sans erreur
+
+---
+
 ## [2.6.0] - 2026-05-12
 
 ### Nouveautés

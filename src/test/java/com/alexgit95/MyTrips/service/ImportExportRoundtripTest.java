@@ -7,6 +7,7 @@ import com.alexgit95.MyTrips.dto.TripExportDto;
 import com.alexgit95.MyTrips.model.Expense;
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
+import com.alexgit95.MyTrips.repository.AccommodationRepository;
 import com.alexgit95.MyTrips.repository.AppUserRepository;
 import com.alexgit95.MyTrips.repository.CategoryRepository;
 import com.alexgit95.MyTrips.repository.ExpenseRepository;
@@ -69,6 +70,9 @@ class ImportExportRoundtripTest {
     private CategoryRepository categoryRepository;
 
     @Autowired
+    private AccommodationRepository accommodationRepository;
+
+    @Autowired
     private AppSettingsService appSettingsService;
 
     @Autowired
@@ -76,6 +80,7 @@ class ImportExportRoundtripTest {
 
     @BeforeEach
     void cleanDomainData() {
+        accommodationRepository.deleteAllInBatch();
         plannerEventRepository.deleteAllInBatch();
         expenseRepository.deleteAllInBatch();
         tripRepository.deleteAllInBatch();

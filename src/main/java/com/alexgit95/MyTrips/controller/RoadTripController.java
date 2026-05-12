@@ -14,6 +14,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
+import com.alexgit95.MyTrips.model.Accommodation;
+import com.alexgit95.MyTrips.service.AccommodationService;
 import com.alexgit95.MyTrips.service.AppSettingsService;
 import com.alexgit95.MyTrips.service.GeoCountryResolver;
 import com.alexgit95.MyTrips.service.PlannerEventService;
@@ -36,6 +38,7 @@ public class RoadTripController {
     private final PlannerEventService   plannerEventService;
     private final AppSettingsService    appSettingsService;
     private final GeoCountryResolver    geoCountryResolver;
+    private final AccommodationService  accommodationService;
     private final ObjectMapper          objectMapper;
 
     @GetMapping("/{id}/road-trip")
@@ -102,6 +105,25 @@ public class RoadTripController {
         model.addAttribute("homePointsFiltered", homePointsFiltered);
         model.addAttribute("homeCountry", homeCountryIso);
         model.addAttribute("homeCountryPointCount", homeCountryEvents.size());
+
+        // Logements : marqueurs maison sur la carte
+        List<Accommodation> accommodations = accommodationService.findByTrip(id).stream()
+                .filter(a -> a.getLatitude() != null && a.getLongitude() != null)
+                .collect(Collectors.toList());
+        List<Map<String, Object>> accommodationMarkers = accommodations.stream()
+                .map(a -> {
+                    Map<String, Object> m = new LinkedHashMap<>();
+                    m.put("name", a.getName());
+                    m.put("address", a.getAddress() != null ? a.getAddress() : "");
+                    m.put("lat", a.getLatitude());
+                    m.put("lng", a.getLongitude());
+                    m.put("arrivalDate", a.getArrivalDate().toString());
+                    m.put("departureDate", a.getDepartureDate().toString());
+                    m.put("comment", a.getComment() != null ? a.getComment() : "");
+                    return m;
+                })
+                .collect(Collectors.toList());
+        model.addAttribute("accommodationsJson", objectMapper.writeValueAsString(accommodationMarkers));
 
         return "trips/road-trip";
     }

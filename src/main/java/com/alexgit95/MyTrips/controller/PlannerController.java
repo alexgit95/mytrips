@@ -1,7 +1,9 @@
 package com.alexgit95.MyTrips.controller;
 
+import com.alexgit95.MyTrips.model.Accommodation;
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
+import com.alexgit95.MyTrips.service.AccommodationService;
 import com.alexgit95.MyTrips.service.PlannerEventService;
 import com.alexgit95.MyTrips.service.ReverseGeocodingService;
 import com.alexgit95.MyTrips.service.TripService;
@@ -17,6 +19,7 @@ import org.springframework.web.servlet.mvc.support.RedirectAttributes;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
 
@@ -28,6 +31,7 @@ public class PlannerController {
     private final TripService tripService;
     private final PlannerEventService plannerEventService;
     private final ReverseGeocodingService reverseGeocodingService;
+    private final AccommodationService accommodationService;
 
     // ---------------------------
     // Affichage du planner
@@ -38,8 +42,20 @@ public class PlannerController {
         Map<LocalDate, java.util.List<PlannerEvent>> eventsByDay =
                 plannerEventService.groupByDay(tripId);
 
+        // Map date → logement actif ce jour-là
+        List<Accommodation> accommodations = accommodationService.findByTrip(tripId);
+        Map<LocalDate, Accommodation> accommodationByDay = new java.util.HashMap<>();
+        for (java.util.Map.Entry<LocalDate, java.util.List<PlannerEvent>> entry : eventsByDay.entrySet()) {
+            LocalDate day = entry.getKey();
+            accommodations.stream()
+                    .filter(a -> !a.getArrivalDate().isAfter(day) && a.getDepartureDate().isAfter(day))
+                    .findFirst()
+                    .ifPresent(a -> accommodationByDay.put(day, a));
+        }
+
         model.addAttribute("trip", trip);
         model.addAttribute("eventsByDay", eventsByDay);
+        model.addAttribute("accommodationByDay", accommodationByDay);
         model.addAttribute("newEvent", new PlannerEvent());
         return "trips/planner";
     }

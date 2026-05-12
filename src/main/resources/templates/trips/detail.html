@@ -60,6 +60,10 @@
                            class="btn btn-outline-warning btn-sm">
                             <i class="bi bi-sign-turn-right me-1"></i>Road Trip
                         </a>
+                        <a th:href="@{/trips/{id}/accommodations(id=${trip.id})}"
+                           class="btn btn-outline-secondary btn-sm" style="border-color:#6f42c1;color:#6f42c1">
+                            <i class="bi bi-house-fill me-1"></i>Logements
+                        </a>
                         <a th:if="${isAdmin}" th:href="@{/trips/{id}/expenses/new(id=${trip.id})}" class="btn btn-success btn-sm">
                             <i class="bi bi-plus-lg me-1"></i>Ajouter une dépense
                         </a>
