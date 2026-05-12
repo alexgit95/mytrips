@@ -237,6 +237,25 @@ Formulaire d'ajout/édition avec : date, libellé, catégorie (icône + nom), mo
 
 Planificateur d'événements par voyage. Chaque événement contient : date, heure, titre, description, localisation géographique (utilisée pour la résolution pays/département sur la page Monde). Les événements sont affichés sous forme de timeline verticale groupée par journée.
 
+#### Saisie des coordonnées GPS via la carte
+
+À côté du champ **Lieu / Adresse**, un bouton 🌍 ouvre une **modale de sélection sur carte OpenStreetMap** (Leaflet). L'utilisateur peut :
+
+- Cliquer n'importe où sur la carte pour placer un marqueur (déplaçable par glisser-déposer)
+- Utiliser le bouton **Ma position** pour centrer la carte sur sa position GPS actuelle
+- Confirmer la sélection pour renseigner automatiquement la **latitude** et la **longitude** de l'événement
+
+Après chaque sélection sur la carte, un **reverse geocoding automatique** interroge l'endpoint `/geocode` pour tenter de remplir le champ adresse avec le nom du lieu (si le géocodage est activé, sinon les coordonnées sont utilisées comme adresse de secours).
+
+Les coordonnées peuvent être saisies **avec ou sans adresse texte**. Elles apparaissent dans une pastille verte sous le champ d'adresse, et peuvent être effacées individuellement. Cette fonctionnalité est disponible à la fois lors de la **création** et de la **modification** d'un événement.
+
+Si une adresse est renseignée sans coordonnées, le service tente un **géocodage forward automatique** (Nominatim, si `GEOCODING_ENABLED=true`) lors de la sauvegarde.
+
+Quand un événement possède des coordonnées GPS (sans adresse texte), la timeline affiche les coordonnées et propose un lien direct vers **Google Maps**. Ces coordonnées sont réutilisées automatiquement par les autres fonctionnalités :
+
+- **Carte du monde** (marqueurs d'étapes GPS précis)
+- **Road Trip** (tracé d'itinéraire interactif)
+
 ### Road Trip
 
 La vue **Road Trip** est accessible depuis la page de détail d'un voyage **terminé** comptant **plus de 4 étapes géocodées** dans le planner.
@@ -246,9 +265,9 @@ Elle affiche :
 - Une **carte OpenStreetMap interactive** avec tous les points GPS du voyage reliés dans l'ordre chronologique
 - Un **sélecteur de date (timeline)** permettant de filtrer la carte sur une journée précise — avec un bouton « 🗺 Tout le voyage » pour revenir à la vue complète
 - Un **itinéraire routier stylisé** avec dégradé de couleurs (orange → bleu) reprenant les routes réelles via l'API OSRM
-- Des **marqueurs numérotés** pour chaque étape avec popup (nom, localisation, date)
+- Des **marqueurs numérotés** pour chaque étape avec popup (nom, localisation ou coordonnées GPS, date)
 - La **distance totale du trajet** calculée via OSRM (ou à vol d'oiseau si l'API est indisponible)
-- La **liste détaillée des étapes** avec numéro, nom, localisation et date
+- La **liste détaillée des étapes** avec numéro, nom, localisation (ou coordonnées en fallback), heure, date et commentaire
 
 #### Filtrage par pays d'origine
 

@@ -89,7 +89,9 @@ public class RoadTripController {
                     m.put("lat", e.getLatitude());
                     m.put("lng", e.getLongitude());
                     m.put("date", e.getEventDateTime().toLocalDate().toString());
+                    m.put("time", e.getEventDateTime().toLocalTime().toString().substring(0, 5));
                     m.put("location", e.getLocation() != null ? e.getLocation() : "");
+                    m.put("comment", e.getComment() != null ? e.getComment() : "");
                     return m;
                 })
                 .collect(Collectors.toList());

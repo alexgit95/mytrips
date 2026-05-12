@@ -7,6 +7,46 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.6.0] - 2026-05-12
+
+### Nouveautés
+
+#### Planner — sélecteur de position sur carte OpenStreetMap
+
+- Ajout d'un **bouton 🌍** à côté du champ « Lieu / Adresse » dans le formulaire de création et la modale de modification d'un événement
+- Un clic ouvre une **modale plein-écran (responsive)** avec une carte interactive **OpenStreetMap via Leaflet**
+- L'utilisateur peut :
+  - **Cliquer sur la carte** pour placer un marqueur et capturer latitude / longitude
+  - **Déplacer le marqueur** par glisser-déposer pour affiner la position
+  - Utiliser le bouton **« Ma position »** pour centrer la carte sur sa géolocalisation GPS actuelle
+  - **Confirmer** la sélection pour renseigner les coordonnées dans le formulaire
+- Après chaque sélection sur la carte, un **reverse geocoding automatique** (via l'endpoint `/geocode` existant) tente de remplir le champ adresse avec le nom du lieu correspondant
+- Les coordonnées s'affichent dans une **pastille verte** sous le champ d'adresse, avec un bouton pour les effacer
+- Les coordonnées peuvent être saisies **sans adresse texte**, pour les lieux sans adresse postale
+- La carte se **réouvre centrée** sur les coordonnées déjà enregistrées lors d'une modification
+- Dans la **timeline**, un événement sans adresse mais avec coordonnées affiche les coordonnées GPS et un lien Google Maps direct
+
+#### Road Trip — étapes sans adresse désormais visibles
+
+- Les événements planner **sans adresse texte** mais possédant des coordonnées GPS sont maintenant inclus dans la vue Road Trip
+- Dans la liste des étapes et les popups de la carte, les coordonnées (`lat, lng`) s'affichent en fallback quand aucune adresse n'est disponible
+- L'**heure** de l'événement est désormais affichée dans la liste des étapes (à côté de la date)
+- Le **commentaire** de l'événement est affiché en italique sous la date dans la liste des étapes (si renseigné)
+- Message d'alerte mis à jour pour mentionner le sélecteur de carte comme alternative au géocodage
+
+### Améliorations
+
+#### Planner — géocodage automatique à la création/modification
+
+- À la création ou modification d'un événement, si une adresse est renseignée sans coordonnées, le service tente automatiquement un **géocodage forward** via Nominatim (si `GEOCODING_ENABLED=true`) pour renseigner latitude/longitude
+
+#### Planner — propagation des coordonnées lors de la modification
+
+- Le service de mise à jour (`PlannerEventService.update`) propage désormais les coordonnées latitude/longitude depuis le formulaire au lieu de les effacer automatiquement lors d'un changement d'adresse
+- La création d'un événement conserve les coordonnées même si aucune adresse texte n'est renseignée (suppression de la réinitialisation automatique lat/lon)
+
+---
+
 ## [2.5.2] - 2026-05-05
 
 ### Améliorations

@@ -8,6 +8,8 @@
 <body>
 
 <th:block th:fragment="extraHead">
+<!-- Leaflet CSS -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
 <style>
 /* ── Timeline ─────────────────────────────────────────────── */
 .planner-timeline { position: relative; padding-left: 2rem; }
@@ -70,6 +72,10 @@
 }
 .event-card .event-name { font-weight: 600; }
 .event-card .event-location { font-size: .85rem; color: #6c757d; }
+
+/* ── Map picker ───────────────────────────────────────────── */
+#mapPickerContainer { height: 450px; width: 100%; }
+.map-picker-coords { font-family: monospace; font-size: .85rem; }
 </style>
 </th:block>
 
@@ -148,6 +154,12 @@
                                                     <i class="bi bi-geo-alt me-1"></i>
                                                     <span th:text="${event.location}"></span>
                                                 </div>
+                                                <!-- Coordonnées GPS (si pas d'adresse mais coordonnées disponibles) -->
+                                                <div th:if="${(event.location == null or #strings.isEmpty(event.location)) and event.latitude != null}"
+                                                     class="event-location">
+                                                    <i class="bi bi-crosshair me-1"></i>
+                                                    <span th:text="${#numbers.formatDecimal(event.latitude, 1, 6) + ', ' + #numbers.formatDecimal(event.longitude, 1, 6)}"></span>
+                                                </div>
                                                 <div th:if="${event.comment != null and !#strings.isEmpty(event.comment)}"
                                                      class="event-location mt-1" style="white-space:pre-line">
                                                     <i class="bi bi-chat-text me-1"></i>
@@ -155,12 +167,21 @@
                                                 </div>
                                             </div>
                                             <div class="d-flex gap-1 flex-shrink-0">
-                                                <!-- Google Maps button (only if location is set) -->
+                                                <!-- Google Maps button — adresse texte -->
                                                 <a th:if="${event.location != null and !#strings.isEmpty(event.location)}"
                                                    th:href="'https://www.google.com/maps/dir/?api=1&destination=' + ${#strings.replace(event.location, ' ', '+')}"
                                                    target="_blank" rel="noopener"
                                                    class="btn btn-sm btn-outline-success"
                                                    title="Ouvrir dans Google Maps"
+                                                   onclick="event.stopPropagation()">
+                                                    <i class="bi bi-map"></i>
+                                                </a>
+                                                <!-- Google Maps button — coordonnées GPS (si pas d'adresse) -->
+                                                <a th:if="${(event.location == null or #strings.isEmpty(event.location)) and event.latitude != null}"
+                                                   th:href="'https://www.google.com/maps?q=' + ${event.latitude} + ',' + ${event.longitude}"
+                                                   target="_blank" rel="noopener"
+                                                   class="btn btn-sm btn-outline-success"
+                                                   title="Ouvrir dans Google Maps (GPS)"
                                                    onclick="event.stopPropagation()">
                                                     <i class="bi bi-map"></i>
                                                 </a>
@@ -242,9 +263,25 @@
 
                         <div class="mb-3">
                             <label class="form-label fw-semibold" for="newLocation">Lieu / Adresse</label>
-                            <input type="text" id="newLocation" class="form-control"
-                                   th:field="*{location}"
-                                   placeholder="Ex: Rue de Rivoli, Paris"/>
+                            <div class="input-group">
+                                <input type="text" id="newLocation" class="form-control"
+                                       th:field="*{location}"
+                                       placeholder="Ex: Rue de Rivoli, Paris"/>
+                                <button type="button" class="btn btn-outline-secondary"
+                                        title="Choisir sur la carte"
+                                        onclick="openMapPicker('create')">
+                                    <i class="bi bi-globe-europe-africa"></i>
+                                </button>
+                            </div>
+                            <div class="d-flex gap-2 mt-1" id="newCoordsBadge" style="display:none">
+                                <small class="text-success map-picker-coords" id="newCoordsDisplay"></small>
+                                <button type="button" class="btn btn-link btn-sm text-danger p-0"
+                                        title="Effacer les coordonnées" onclick="clearNewCoords()">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="newLatitude"  name="latitude"  th:value="*{latitude}"/>
+                            <input type="hidden" id="newLongitude" name="longitude" th:value="*{longitude}"/>
                         </div>
 
                         <div class="mb-3">
@@ -290,7 +327,23 @@
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold" for="editLocation">Lieu / Adresse</label>
-                            <input type="text" id="editLocation" name="location" class="form-control"/>
+                            <div class="input-group">
+                                <input type="text" id="editLocation" name="location" class="form-control"/>
+                                <button type="button" class="btn btn-outline-secondary"
+                                        title="Choisir sur la carte"
+                                        onclick="openMapPicker('edit')">
+                                    <i class="bi bi-globe-europe-africa"></i>
+                                </button>
+                            </div>
+                            <div class="d-flex gap-2 mt-1" id="editCoordsBadge" style="display:none">
+                                <small class="text-success map-picker-coords" id="editCoordsDisplay"></small>
+                                <button type="button" class="btn btn-link btn-sm text-danger p-0"
+                                        title="Effacer les coordonnées" onclick="clearEditCoords()">
+                                    <i class="bi bi-x-circle"></i>
+                                </button>
+                            </div>
+                            <input type="hidden" id="editLatitude"  name="latitude"/>
+                            <input type="hidden" id="editLongitude" name="longitude"/>
                         </div>
                         <div class="mb-3">
                             <label class="form-label fw-semibold" for="editComment">Commentaire</label>
@@ -341,6 +394,52 @@
         </div>
     </div>
 
+    <!-- ════════════════════════════════════════════════════
+         Modal — Sélecteur de carte (OpenStreetMap / Leaflet)
+    ═══════════════════════════════════════════════════════ -->
+    <div th:if="${canEditPlanner}" class="modal fade" id="mapPickerModal" tabindex="-1" aria-labelledby="mapPickerLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="mapPickerLabel">
+                        <i class="bi bi-globe-europe-africa me-2"></i>Sélectionner un emplacement sur la carte
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="mapPickerContainer"></div>
+                    <div class="p-3 border-top bg-light">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-sm-5">
+                                <label class="form-label small fw-semibold mb-1" for="mapPickerLat">Latitude</label>
+                                <input type="text" id="mapPickerLat" class="form-control form-control-sm map-picker-coords" readonly placeholder="–"/>
+                            </div>
+                            <div class="col-sm-5">
+                                <label class="form-label small fw-semibold mb-1" for="mapPickerLon">Longitude</label>
+                                <input type="text" id="mapPickerLon" class="form-control form-control-sm map-picker-coords" readonly placeholder="–"/>
+                            </div>
+                            <div class="col-sm-2">
+                                <button type="button" class="btn btn-sm btn-outline-warning w-100"
+                                        id="mapPickerLocateMe" title="Utiliser ma position actuelle">
+                                    <i class="bi bi-geo-alt-fill"></i> Ma position
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-muted small mt-2 mb-0">
+                            <i class="bi bi-info-circle me-1"></i>Cliquez sur la carte pour placer le marqueur et renseigner les coordonnées.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-success" id="mapPickerConfirm" disabled>
+                        <i class="bi bi-check-lg me-1"></i>Confirmer la position
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Hidden data for edit modal — serialised server-side events -->
     <div id="events-data" style="display:none">
         <span th:each="dayEntry : ${eventsByDay}">
@@ -349,6 +448,8 @@
                   th:data-name="${event.name}"
                   th:data-datetime="${#temporals.format(event.eventDateTime, 'yyyy-MM-dd') + 'T' + #temporals.format(event.eventDateTime, 'HH:mm')}"
                   th:data-location="${event.location != null ? event.location : ''}"
+                  th:data-lat="${event.latitude != null ? event.latitude : ''}"
+                  th:data-lon="${event.longitude != null ? event.longitude : ''}"
                   th:data-comment="${event.comment != null ? event.comment : ''}"
                   th:data-action="@{/trips/{tid}/planner/events/{eid}(tid=${trip.id}, eid=${event.id})}"
                   th:data-comment-action="@{/trips/{tid}/planner/events/{eid}/comment(tid=${trip.id}, eid=${event.id})}">
@@ -359,6 +460,8 @@
 </th:block>
 
 <th:block th:fragment="extraScripts">
+<!-- Leaflet JS -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 (function () {
     // Build a lookup map from event data spans
@@ -368,11 +471,15 @@
             name:     span.dataset.name,
             datetime: span.dataset.datetime,
             location: span.dataset.location ?? '',
+            lat:      span.dataset.lat ?? '',
+            lon:      span.dataset.lon ?? '',
             comment:  span.dataset.comment ?? '',
             action:   span.dataset.action,
             commentAction: span.dataset.commentAction
         };
     });
+
+
 
     window.openEditModal = function (card) {
         if (!card) return;
@@ -387,7 +494,12 @@
         document.getElementById('editDateTime').value = data.datetime ?? '';
         document.getElementById('editLocation').value = data.location ?? '';
         document.getElementById('editComment').value  = data.comment ?? '';
+        document.getElementById('editLatitude').value  = data.lat ?? '';
+        document.getElementById('editLongitude').value = data.lon ?? '';
         editForm.action = data.action;
+
+        // Afficher le badge de coordonnées dans la modale d'édition
+        refreshCoordsBadge('edit', data.lat, data.lon);
 
         const modal = new bootstrap.Modal(document.getElementById('editModal'));
         modal.show();
@@ -515,6 +627,201 @@
             alert('Une erreur est survenue');
         });
     }
+
+    // ════════════════════════════════════════════════════════
+    //  Sélecteur de carte OpenStreetMap (Leaflet)
+    // ════════════════════════════════════════════════════════
+    let mapPickerMap    = null;
+    let mapPickerMarker = null;
+    let mapPickerContext = null; // 'create' | 'edit'
+    let mapPickerSelectedLat = null;
+    let mapPickerSelectedLon = null;
+
+    // Initialise (ou réutilise) la carte dans la modale
+    function initMapPicker() {
+        if (mapPickerMap) {
+            setTimeout(function() { mapPickerMap.invalidateSize(); }, 300);
+            return;
+        }
+        mapPickerMap = L.map('mapPickerContainer').setView([46.2276, 2.2137], 5); // France par défaut
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(mapPickerMap);
+
+        mapPickerMap.on('click', function(e) {
+            const lat = e.latlng.lat;
+            const lon = e.latlng.lng;
+            setMapPickerPoint(lat, lon);
+        });
+
+        document.getElementById('mapPickerLocateMe').addEventListener('click', function() {
+            if (!navigator.geolocation) {
+                alert('La géolocalisation n\'est pas supportée par votre navigateur.');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                setMapPickerPoint(pos.coords.latitude, pos.coords.longitude);
+                mapPickerMap.setView([pos.coords.latitude, pos.coords.longitude], 14);
+            }, function() {
+                alert('Impossible d\'obtenir votre position.');
+            });
+        });
+
+        document.getElementById('mapPickerConfirm').addEventListener('click', function() {
+            if (mapPickerSelectedLat === null) return;
+            applyMapPickerCoords(mapPickerSelectedLat, mapPickerSelectedLon);
+            bootstrap.Modal.getInstance(document.getElementById('mapPickerModal')).hide();
+        });
+    }
+
+    function setMapPickerPoint(lat, lon) {
+        mapPickerSelectedLat = lat;
+        mapPickerSelectedLon = lon;
+
+        const latStr = lat.toFixed(6);
+        const lonStr = lon.toFixed(6);
+        document.getElementById('mapPickerLat').value = latStr;
+        document.getElementById('mapPickerLon').value = lonStr;
+        document.getElementById('mapPickerConfirm').disabled = false;
+
+        if (mapPickerMarker) {
+            mapPickerMarker.setLatLng([lat, lon]);
+        } else {
+            mapPickerMarker = L.marker([lat, lon], { draggable: true }).addTo(mapPickerMap);
+            mapPickerMarker.on('dragend', function() {
+                const ll = mapPickerMarker.getLatLng();
+                setMapPickerPoint(ll.lat, ll.lng);
+            });
+        }
+        mapPickerMarker.bindPopup(latStr + ', ' + lonStr).openPopup();
+
+        // Reverse geocoding : tenter de remplir l'adresse depuis les coordonnées
+        reverseGeocodeForPicker(lat, lon);
+    }
+
+    function reverseGeocodeForPicker(lat, lon) {
+        const tripId = window.location.pathname.split('/')[2];
+        const csrf = document.querySelector('input[name="_csrf"]')?.value || '';
+        fetch(`/trips/${tripId}/planner/geocode?lat=${lat}&lon=${lon}`, {
+            headers: { 'X-CSRF-Token': csrf }
+        })
+        .then(function(r) { return r.ok ? r.json() : null; })
+        .then(function(geo) {
+            if (!geo) return;
+            const address = geo.address || '';
+            // Remplir le champ adresse du contexte actif (seulement si vide ou déjà généré par GPS)
+            if (mapPickerContext === 'create') {
+                const loc = document.getElementById('newLocation');
+                if (loc && address) loc.value = address;
+            } else if (mapPickerContext === 'edit') {
+                const loc = document.getElementById('editLocation');
+                if (loc && address) loc.value = address;
+            }
+            // Mettre à jour le popup avec l'adresse
+            if (mapPickerMarker && address) {
+                mapPickerMarker.bindPopup(address).openPopup();
+            }
+        })
+        .catch(function() { /* géocodage silencieux */ });
+    }
+
+    function applyMapPickerCoords(lat, lon) {
+        const latStr = lat.toFixed(6);
+        const lonStr = lon.toFixed(6);
+        if (mapPickerContext === 'create') {
+            document.getElementById('newLatitude').value  = latStr;
+            document.getElementById('newLongitude').value = lonStr;
+            refreshCoordsBadge('new', latStr, lonStr);
+        } else if (mapPickerContext === 'edit') {
+            document.getElementById('editLatitude').value  = latStr;
+            document.getElementById('editLongitude').value = lonStr;
+            refreshCoordsBadge('edit', latStr, lonStr);
+        }
+    }
+
+    // Met à jour le badge de coordonnées affiché sous la barre d'adresse
+    window.refreshCoordsBadge = function(ctx, lat, lon) {
+        const prefix = ctx === 'new' ? 'new' : 'edit';
+        const badge   = document.getElementById(prefix + 'CoordsBadge');
+        const display = document.getElementById(prefix + 'CoordsDisplay');
+        if (!badge || !display) return;
+        if (lat && lon && String(lat).trim() !== '' && String(lon).trim() !== '') {
+            display.textContent = '📍 ' + parseFloat(lat).toFixed(6) + ', ' + parseFloat(lon).toFixed(6);
+            badge.style.display = 'flex';
+        } else {
+            display.textContent = '';
+            badge.style.display = 'none';
+        }
+    };
+
+    window.clearNewCoords = function() {
+        document.getElementById('newLatitude').value  = '';
+        document.getElementById('newLongitude').value = '';
+        refreshCoordsBadge('new', '', '');
+    };
+
+    window.clearEditCoords = function() {
+        document.getElementById('editLatitude').value  = '';
+        document.getElementById('editLongitude').value = '';
+        refreshCoordsBadge('edit', '', '');
+    };
+
+    // Ouvre la modale de sélection de carte
+    window.openMapPicker = function(context) {
+        mapPickerContext = context;
+
+        // Récupérer les coordonnées actuelles du contexte pour centrer la carte
+        let existingLat = null, existingLon = null;
+        if (context === 'create') {
+            existingLat = parseFloat(document.getElementById('newLatitude').value) || null;
+            existingLon = parseFloat(document.getElementById('newLongitude').value) || null;
+        } else if (context === 'edit') {
+            existingLat = parseFloat(document.getElementById('editLatitude').value) || null;
+            existingLon = parseFloat(document.getElementById('editLongitude').value) || null;
+        }
+
+        // Réinitialiser les champs du picker
+        document.getElementById('mapPickerLat').value = existingLat ? existingLat.toFixed(6) : '';
+        document.getElementById('mapPickerLon').value = existingLon ? existingLon.toFixed(6) : '';
+        document.getElementById('mapPickerConfirm').disabled = (existingLat === null);
+        mapPickerSelectedLat = existingLat;
+        mapPickerSelectedLon = existingLon;
+
+        const modal = new bootstrap.Modal(document.getElementById('mapPickerModal'));
+        modal.show();
+
+        document.getElementById('mapPickerModal').addEventListener('shown.bs.modal', function handler() {
+            initMapPicker();
+            setTimeout(function() { mapPickerMap.invalidateSize(); }, 200);
+
+            // Supprimer l'ancien marqueur pour réinitialiser
+            if (mapPickerMarker) {
+                mapPickerMap.removeLayer(mapPickerMarker);
+                mapPickerMarker = null;
+            }
+
+            // Centrer et placer un marqueur si coordonnées existantes
+            if (existingLat !== null && existingLon !== null) {
+                mapPickerMap.setView([existingLat, existingLon], 14);
+                setMapPickerPoint(existingLat, existingLon);
+            } else {
+                mapPickerMap.setView([46.2276, 2.2137], 5);
+            }
+            document.getElementById('mapPickerModal').removeEventListener('shown.bs.modal', handler);
+        }, { once: false }); // once:false car removeEventListener manuel ci-dessus
+    };
+
+    // Initialiser le badge si le formulaire de création contient déjà des coordonnées
+    // (cas d'une erreur de validation serveur avec re-rendu de la page)
+    (function() {
+        const latEl = document.getElementById('newLatitude');
+        const lonEl = document.getElementById('newLongitude');
+        if (latEl && lonEl && latEl.value && lonEl.value) {
+            refreshCoordsBadge('new', latEl.value, lonEl.value);
+        }
+    })();
+
 })();
 </script>
 </th:block>
