@@ -6,6 +6,7 @@ import com.alexgit95.MyTrips.model.CategoryEntity;
 import com.alexgit95.MyTrips.model.Expense;
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
+import com.alexgit95.MyTrips.repository.AccommodationRepository;
 import com.alexgit95.MyTrips.repository.AppUserRepository;
 import com.alexgit95.MyTrips.repository.CategoryRepository;
 import com.alexgit95.MyTrips.repository.ExpenseRepository;
@@ -68,10 +69,14 @@ class ImportExportEndToEndTest {
         private CategoryRepository categoryRepository;
 
     @Autowired
+    private AccommodationRepository accommodationRepository;
+
+    @Autowired
     private ObjectMapper objectMapper;
 
     @BeforeEach
     void cleanDomainData() {
+        accommodationRepository.deleteAllInBatch();
         plannerEventRepository.deleteAllInBatch();
         expenseRepository.deleteAllInBatch();
         tripRepository.deleteAllInBatch();

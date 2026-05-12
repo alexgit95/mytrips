@@ -1,16 +1,19 @@
 package com.alexgit95.MyTrips.service;
 
+import com.alexgit95.MyTrips.dto.AccommodationExportDto;
 import com.alexgit95.MyTrips.dto.CategoryExportDto;
 import com.alexgit95.MyTrips.dto.ExportDto;
 import com.alexgit95.MyTrips.dto.ExpenseExportDto;
 import com.alexgit95.MyTrips.dto.PlannerEventExportDto;
 import com.alexgit95.MyTrips.dto.TripExportDto;
 import com.alexgit95.MyTrips.dto.UserExportDto;
+import com.alexgit95.MyTrips.model.Accommodation;
 import com.alexgit95.MyTrips.model.CategoryEntity;
 import com.alexgit95.MyTrips.model.Expense;
 import com.alexgit95.MyTrips.model.AppUser;
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
+import com.alexgit95.MyTrips.repository.AccommodationRepository;
 import com.alexgit95.MyTrips.repository.AppUserRepository;
 import com.alexgit95.MyTrips.repository.CategoryRepository;
 import com.alexgit95.MyTrips.repository.ExpenseRepository;
@@ -46,6 +49,7 @@ public class ImportExportWorker {
     private final ExpenseRepository expenseRepository;
     private final PlannerEventRepository plannerEventRepository;
     private final AppUserRepository appUserRepository;
+    private final AccommodationRepository accommodationRepository;
     private final CategoryService categoryService;
     private final AppSettingsService appSettingsService;
     private final ObjectMapper objectMapper;
@@ -67,11 +71,13 @@ public class ImportExportWorker {
             List<Expense> expenses = expenseRepository.findAll();
             List<PlannerEvent> plannerEvents = plannerEventRepository.findAll();
             List<AppUser> users = appUserRepository.findAll();
+            List<Accommodation> accommodations = accommodationRepository.findAll();
             log.info("[EXPORT] Catégories custom trouvées : {}", customCategories.size());
             log.info("[EXPORT] Voyages trouvés : {}", trips.size());
             log.info("[EXPORT] Dépenses trouvées : {}", expenses.size());
             log.info("[EXPORT] Événements planner trouvés : {}", plannerEvents.size());
             log.info("[EXPORT] Utilisateurs trouvés : {}", users.size());
+            log.info("[EXPORT] Logements trouvés : {}", accommodations.size());
 
             List<CategoryExportDto> categoryDtos = customCategories.stream()
                     .map(c -> CategoryExportDto.builder()
@@ -123,6 +129,20 @@ public class ImportExportWorker {
                             .build())
                     .toList();
 
+            List<AccommodationExportDto> accommodationDtos = accommodations.stream()
+                    .map(a -> AccommodationExportDto.builder()
+                            .id(a.getId())
+                            .name(a.getName())
+                            .address(a.getAddress())
+                            .arrivalDate(a.getArrivalDate())
+                            .departureDate(a.getDepartureDate())
+                            .latitude(a.getLatitude())
+                            .longitude(a.getLongitude())
+                            .comment(a.getComment())
+                            .tripId(a.getTrip().getId())
+                            .build())
+                    .toList();
+
             log.info("[EXPORT] Sérialisation des DTOs...");
             ExportDto exportData = ExportDto.builder()
                     .categories(categoryDtos)
@@ -130,6 +150,7 @@ public class ImportExportWorker {
                     .expenses(expenseDtos)
                     .plannerEvents(plannerEventDtos)
                     .users(userDtos)
+                    .accommodations(accommodationDtos)
                     .homeCountry(appSettingsService.getHomeCountry())
                     .build();
 
@@ -157,9 +178,11 @@ public class ImportExportWorker {
             List<ExpenseExportDto> expenses = data.getExpenses() != null ? data.getExpenses() : List.of();
             List<PlannerEventExportDto> plannerEvents = data.getPlannerEvents() != null ? data.getPlannerEvents() : List.of();
             List<UserExportDto> users = data.getUsers() != null ? data.getUsers() : List.of();
+            List<AccommodationExportDto> accommodationsDto = data.getAccommodations() != null ? data.getAccommodations() : List.of();
 
-            // Suppression UNIQUEMENT des dépenses, événements planner et voyages (pas les catégories)
+            // Suppression UNIQUEMENT des dépenses, événements planner, logements et voyages (pas les catégories)
             log.info("[IMPORT] Suppression des données existantes...");
+            accommodationRepository.deleteAll();
             plannerEventRepository.deleteAll();
             expenseRepository.deleteAll();
             tripRepository.deleteAll();
@@ -306,7 +329,39 @@ public class ImportExportWorker {
                 log.info("[IMPORT] Aucun événement planner à importer.");
             }
 
-            // ===== ÉTAPE 5 : Importer les utilisateurs =====
+            // ===== ÉTAPE 5 : Importer les logements =====
+            log.info("[IMPORT] Importation des logements...");
+            if (!accommodationsDto.isEmpty()) {
+                List<Accommodation> accommodationsToSave = new ArrayList<>();
+                int accOk = 0;
+                int accErreur = 0;
+                for (AccommodationExportDto dto : accommodationsDto) {
+                    Trip trip = tripById.get(dto.getTripId());
+                    if (trip == null) {
+                        log.warn("[IMPORT] Voyage non trouvé pour le logement (tripId: {})", dto.getTripId());
+                        accErreur++;
+                        continue;
+                    }
+                    accommodationsToSave.add(Accommodation.builder()
+                            .name(dto.getName())
+                            .address(dto.getAddress())
+                            .arrivalDate(dto.getArrivalDate())
+                            .departureDate(dto.getDepartureDate())
+                            .latitude(dto.getLatitude())
+                            .longitude(dto.getLongitude())
+                            .comment(dto.getComment())
+                            .trip(trip)
+                            .build());
+                    accOk++;
+                }
+                accommodationRepository.saveAll(accommodationsToSave);
+                accommodationRepository.flush();
+                log.info("[IMPORT] Logements importés (OK: {}, Erreurs: {})", accOk, accErreur);
+            } else {
+                log.info("[IMPORT] Aucun logement à importer.");
+            }
+
+            // ===== ÉTAPE 6 : Importer les utilisateurs =====
             log.info("[IMPORT] Importation des utilisateurs...");
             if (!users.isEmpty()) {
                 // Supprimer tous les utilisateurs existants et les remplacer
@@ -333,7 +388,7 @@ public class ImportExportWorker {
                 log.info("[IMPORT] Aucun utilisateur à importer.");
             }
 
-            // ===== ÉTAPE 6 : Restaurer le pays d'origine =====
+            // ===== ÉTAPE 7 : Restaurer le pays d'origine =====
             if (data.getHomeCountry() != null && !data.getHomeCountry().isBlank()) {
                 appSettingsService.setHomeCountry(data.getHomeCountry());
                 log.info("[IMPORT] Pays d'origine restauré : {}", data.getHomeCountry());

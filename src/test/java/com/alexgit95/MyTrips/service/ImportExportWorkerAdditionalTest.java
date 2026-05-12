@@ -1,5 +1,6 @@
 package com.alexgit95.MyTrips.service;
 
+import com.alexgit95.MyTrips.dto.AccommodationExportDto;
 import com.alexgit95.MyTrips.dto.CategoryExportDto;
 import com.alexgit95.MyTrips.dto.ExpenseExportDto;
 import com.alexgit95.MyTrips.dto.ExportDto;
@@ -11,6 +12,7 @@ import com.alexgit95.MyTrips.model.CategoryEntity;
 import com.alexgit95.MyTrips.model.Expense;
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
+import com.alexgit95.MyTrips.repository.AccommodationRepository;
 import com.alexgit95.MyTrips.repository.AppUserRepository;
 import com.alexgit95.MyTrips.repository.CategoryRepository;
 import com.alexgit95.MyTrips.repository.ExpenseRepository;
@@ -52,6 +54,8 @@ class ImportExportWorkerAdditionalTest {
     @Mock
     private AppUserRepository appUserRepository;
     @Mock
+    private AccommodationRepository accommodationRepository;
+    @Mock
     private CategoryService categoryService;
     @Mock
     private AppSettingsService appSettingsService;
@@ -72,6 +76,7 @@ class ImportExportWorkerAdditionalTest {
         when(expenseRepository.findAll()).thenReturn(List.of());
         when(plannerEventRepository.findAll()).thenReturn(List.of());
         when(appUserRepository.findAll()).thenReturn(List.of());
+        when(accommodationRepository.findAll()).thenReturn(List.of());
         when(appSettingsService.getHomeCountry()).thenReturn("DE");
 
         ObjectWriter writer = mock(ObjectWriter.class);
@@ -103,6 +108,7 @@ class ImportExportWorkerAdditionalTest {
         when(expenseRepository.findAll()).thenReturn(List.of());
         when(plannerEventRepository.findAll()).thenReturn(List.of());
         when(appUserRepository.findAll()).thenReturn(List.of());
+        when(accommodationRepository.findAll()).thenReturn(List.of());
         when(appSettingsService.getHomeCountry()).thenReturn("FR");
 
         ObjectWriter writer = mock(ObjectWriter.class);
@@ -126,6 +132,7 @@ class ImportExportWorkerAdditionalTest {
         when(expenseRepository.findAll()).thenReturn(List.of());
         when(plannerEventRepository.findAll()).thenReturn(List.of());
         when(appUserRepository.findAll()).thenReturn(List.of());
+        when(accommodationRepository.findAll()).thenReturn(List.of());
         when(appSettingsService.getHomeCountry()).thenReturn("FR");
 
         ObjectWriter writer = mock(ObjectWriter.class);
@@ -156,6 +163,7 @@ class ImportExportWorkerAdditionalTest {
         when(expenseRepository.findAll()).thenReturn(List.of());
         when(plannerEventRepository.findAll()).thenReturn(List.of());
         when(appUserRepository.findAll()).thenReturn(List.of(admin, reporter, guest));
+        when(accommodationRepository.findAll()).thenReturn(List.of());
         when(appSettingsService.getHomeCountry()).thenReturn("FR");
 
         ObjectWriter writer = mock(ObjectWriter.class);
@@ -188,6 +196,7 @@ class ImportExportWorkerAdditionalTest {
         when(expenseRepository.findAll()).thenReturn(List.of(expense));
         when(plannerEventRepository.findAll()).thenReturn(List.of());
         when(appUserRepository.findAll()).thenReturn(List.of());
+        when(accommodationRepository.findAll()).thenReturn(List.of());
         when(appSettingsService.getHomeCountry()).thenReturn("FR");
 
         ObjectWriter writer = mock(ObjectWriter.class);
@@ -612,8 +621,9 @@ class ImportExportWorkerAdditionalTest {
 
         worker.importFromJson(new ByteArrayInputStream("{}".getBytes()));
 
-        // Verify deletion order: plannerEvents first, then expenses, then trips
-        var inOrder = inOrder(plannerEventRepository, expenseRepository, tripRepository);
+        // Verify deletion order: accommodations first, then plannerEvents, then expenses, then trips
+        var inOrder = inOrder(accommodationRepository, plannerEventRepository, expenseRepository, tripRepository);
+        inOrder.verify(accommodationRepository).deleteAll();
         inOrder.verify(plannerEventRepository).deleteAll();
         inOrder.verify(expenseRepository).deleteAll();
         inOrder.verify(tripRepository).deleteAll();

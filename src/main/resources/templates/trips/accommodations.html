@@ -1,0 +1,513 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security"
+      lang="fr"
+      th:replace="~{fragments/layout :: layout(pageTitle='Logements – ' + ${trip.name},
+                                               content=~{::content},
+                                               extraHead=~{::extraHead},
+                                               extraScripts=~{::extraScripts})}">
+<head></head>
+<body>
+
+<th:block th:fragment="extraHead">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
+<style>
+.accommodation-card {
+    border-left: 4px solid #6f42c1;
+    transition: box-shadow .15s, transform .15s;
+}
+.accommodation-card:hover { box-shadow: 0 4px 18px rgba(0,0,0,.1); transform: translateY(-1px); }
+.house-icon { color: #6f42c1; }
+#accMapPickerContainer { height: 450px; }
+</style>
+</th:block>
+
+<th:block th:fragment="content">
+
+    <!-- Breadcrumb -->
+    <nav aria-label="breadcrumb" class="mb-3">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a th:href="@{/trips}">Voyages</a></li>
+            <li class="breadcrumb-item"><a th:href="@{/trips/{id}(id=${trip.id})}" th:text="${trip.name}">Voyage</a></li>
+            <li class="breadcrumb-item active">Logements</li>
+        </ol>
+    </nav>
+
+    <!-- En-tête -->
+    <div class="d-flex align-items-center justify-content-between flex-wrap gap-3 mb-4">
+        <div>
+            <h2 class="mb-1 fw-bold">
+                <i class="bi bi-house-fill me-2 house-icon"></i>Logements
+                <span class="h4 fw-normal text-muted ms-2" th:text="${trip.name}"></span>
+            </h2>
+            <p class="text-muted small mb-0">
+                <i class="bi bi-calendar3 me-1"></i>
+                <span th:text="${#temporals.format(trip.startDate, 'dd MMMM yyyy')}"></span>
+                &rarr;
+                <span th:text="${#temporals.format(trip.endDate, 'dd MMMM yyyy')}"></span>
+            </p>
+        </div>
+        <a th:href="@{/trips/{id}(id=${trip.id})}" class="btn btn-outline-secondary btn-sm">
+            <i class="bi bi-arrow-left me-1"></i>Retour au voyage
+        </a>
+    </div>
+
+    <!-- Flash messages -->
+    <div th:if="${success}" class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bi bi-check-circle me-2"></i><span th:text="${success}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+    <div th:if="${error}" class="alert alert-danger alert-dismissible fade show" role="alert">
+        <i class="bi bi-exclamation-triangle me-2"></i><span th:text="${error}"></span>
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+
+    <div class="row g-4">
+
+        <!-- Colonne gauche : liste des logements -->
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h6 class="mb-0"><i class="bi bi-list-ul me-2 house-icon"></i>Logements enregistrés
+                        (<span th:text="${#lists.size(accommodations)}">0</span>)
+                    </h6>
+                </div>
+                <div class="card-body p-3">
+
+                    <!-- Vide -->
+                    <div th:if="${#lists.isEmpty(accommodations)}" class="text-center py-4 text-muted">
+                        <i class="bi bi-house display-4 mb-3 d-block"></i>
+                        <p>Aucun logement enregistré pour ce voyage.</p>
+                        <p class="small">Ajoutez un logement depuis le formulaire ci-contre.</p>
+                    </div>
+
+                    <!-- Liste -->
+                    <div th:unless="${#lists.isEmpty(accommodations)}" class="d-flex flex-column gap-3">
+                        <div th:each="acc : ${accommodations}"
+                             class="card accommodation-card"
+                             th:id="'acc-' + ${acc.id}">
+                            <div class="card-body py-2 px-3">
+                                <div class="d-flex align-items-start gap-3 flex-wrap">
+                                    <div class="flex-grow-1 min-w-0">
+                                        <div class="fw-semibold">
+                                            <i class="bi bi-house-fill me-1 house-icon"></i>
+                                            <span th:text="${acc.name}">Nom du logement</span>
+                                        </div>
+                                        <div th:if="${acc.address != null and !#strings.isEmpty(acc.address)}"
+                                             class="text-muted small mt-1">
+                                            <i class="bi bi-geo-alt me-1"></i>
+                                            <span th:text="${acc.address}"></span>
+                                        </div>
+                                        <div class="text-muted small mt-1">
+                                            <i class="bi bi-calendar-check me-1 text-success"></i>Arrivée :
+                                            <strong th:text="${#temporals.format(acc.arrivalDate, 'dd/MM/yyyy')}"></strong>
+                                            &nbsp;&nbsp;
+                                            <i class="bi bi-calendar-x me-1 text-danger"></i>Départ :
+                                            <strong th:text="${#temporals.format(acc.departureDate, 'dd/MM/yyyy')}"></strong>
+                                        </div>
+                                        <div th:if="${acc.latitude != null}" class="text-muted small mt-1">
+                                            <i class="bi bi-crosshair me-1"></i>
+                                            <span th:text="${#numbers.formatDecimal(acc.latitude, 1, 6) + ', ' + #numbers.formatDecimal(acc.longitude, 1, 6)}"></span>
+                                        </div>
+                                        <div th:if="${acc.comment != null and !#strings.isEmpty(acc.comment)}"
+                                             class="text-muted small mt-1" style="white-space:pre-line">
+                                            <i class="bi bi-chat-text me-1"></i>
+                                            <span th:text="${acc.comment}"></span>
+                                        </div>
+                                    </div>
+                                    <div class="d-flex gap-2 flex-shrink-0" sec:authorize="hasRole('ADMIN')">
+                                        <a th:href="@{/trips/{tid}/accommodations/{id}/edit(tid=${trip.id}, id=${acc.id})}"
+                                           class="btn btn-sm btn-outline-primary" title="Modifier">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <form th:action="@{/trips/{tid}/accommodations/{id}/delete(tid=${trip.id}, id=${acc.id})}"
+                                              method="post" class="d-inline"
+                                              onsubmit="return confirm('Supprimer ce logement ?')">
+                                            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="Supprimer">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Colonne droite : formulaire ajout / édition -->
+        <div class="col-lg-4" sec:authorize="hasRole('ADMIN')">
+
+            <!-- Formulaire ajout -->
+            <div th:if="${editAccommodation == null}" class="card shadow-sm" id="createCard">
+                <div class="card-header bg-purple text-white" style="background:#6f42c1!important">
+                    <h6 class="mb-0 text-white"><i class="bi bi-plus-circle me-2"></i>Nouveau logement</h6>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/trips/{id}/accommodations(id=${trip.id})}"
+                          th:object="${newAccommodation}" method="post" novalidate>
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="newName">Nom du logement <span class="text-danger">*</span></label>
+                            <input type="text" id="newName" class="form-control"
+                                   th:field="*{name}"
+                                   th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'"
+                                   placeholder="ex : Hôtel Bellevue, AirBnB Paris…"/>
+                            <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback"
+                                 th:errors="*{name}"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="newAddress">Adresse</label>
+                            <div class="input-group">
+                                <input type="text" id="newAddress" class="form-control"
+                                       th:field="*{address}"
+                                       placeholder="ex : 12 rue de la Paix, Paris"/>
+                                <button type="button" class="btn btn-outline-secondary"
+                                        title="Choisir sur la carte"
+                                        onclick="openAccMapPicker('create')">
+                                    <i class="bi bi-globe-europe-africa"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="newArrivalDate">Date d'arrivée <span class="text-danger">*</span></label>
+                            <input type="date" id="newArrivalDate" class="form-control"
+                                   th:field="*{arrivalDate}"
+                                   th:classappend="${#fields.hasErrors('arrivalDate')} ? 'is-invalid'"/>
+                            <div th:if="${#fields.hasErrors('arrivalDate')}" class="invalid-feedback"
+                                 th:errors="*{arrivalDate}"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="newDepartureDate">Date de départ <span class="text-danger">*</span></label>
+                            <input type="date" id="newDepartureDate" class="form-control"
+                                   th:field="*{departureDate}"
+                                   th:classappend="${#fields.hasErrors('departureDate')} ? 'is-invalid'"/>
+                            <div th:if="${#fields.hasErrors('departureDate')}" class="invalid-feedback"
+                                 th:errors="*{departureDate}"></div>
+                        </div>
+
+                        <div class="d-flex gap-2 mb-2" id="newAccCoordsBadge" style="display:none">
+                            <small class="text-success" id="newAccCoordsDisplay"></small>
+                            <button type="button" class="btn btn-link btn-sm text-danger p-0"
+                                    title="Effacer les coordonnées" onclick="clearNewAccCoords()">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                        <input type="hidden" id="newAccLatitude"  name="latitude"  th:value="*{latitude}"/>
+                        <input type="hidden" id="newAccLongitude" name="longitude" th:value="*{longitude}"/>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="newComment">Commentaire</label>
+                            <textarea id="newComment" class="form-control" rows="3"
+                                      th:field="*{comment}" placeholder="Informations pratiques, contacts…"></textarea>
+                        </div>
+
+                        <button type="submit" class="btn btn-sm w-100" style="background:#6f42c1;color:#fff">
+                            <i class="bi bi-plus-circle me-1"></i>Ajouter le logement
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Formulaire édition -->
+            <div th:if="${editAccommodation != null}" class="card shadow-sm border-primary">
+                <div class="card-header bg-primary text-white">
+                    <h6 class="mb-0"><i class="bi bi-pencil me-2"></i>Modifier le logement</h6>
+                </div>
+                <div class="card-body">
+                    <form th:action="@{/trips/{tid}/accommodations/{id}(tid=${trip.id}, id=${editAccommodation.id})}"
+                          th:object="${editAccommodation}" method="post" novalidate>
+                        <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="editName">Nom du logement <span class="text-danger">*</span></label>
+                            <input type="text" id="editName" class="form-control"
+                                   th:field="*{name}"
+                                   th:classappend="${#fields.hasErrors('name')} ? 'is-invalid'"/>
+                            <div th:if="${#fields.hasErrors('name')}" class="invalid-feedback"
+                                 th:errors="*{name}"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="editAddress">Adresse</label>
+                            <div class="input-group">
+                                <input type="text" id="editAddress" class="form-control"
+                                       th:field="*{address}"/>
+                                <button type="button" class="btn btn-outline-secondary"
+                                        title="Choisir sur la carte"
+                                        onclick="openAccMapPicker('edit')">
+                                    <i class="bi bi-globe-europe-africa"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="editArrivalDate">Date d'arrivée <span class="text-danger">*</span></label>
+                            <input type="date" id="editArrivalDate" class="form-control"
+                                   th:field="*{arrivalDate}"
+                                   th:classappend="${#fields.hasErrors('arrivalDate')} ? 'is-invalid'"/>
+                            <div th:if="${#fields.hasErrors('arrivalDate')}" class="invalid-feedback"
+                                 th:errors="*{arrivalDate}"></div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="editDepartureDate">Date de départ <span class="text-danger">*</span></label>
+                            <input type="date" id="editDepartureDate" class="form-control"
+                                   th:field="*{departureDate}"
+                                   th:classappend="${#fields.hasErrors('departureDate')} ? 'is-invalid'"/>
+                            <div th:if="${#fields.hasErrors('departureDate')}" class="invalid-feedback"
+                                 th:errors="*{departureDate}"></div>
+                        </div>
+
+                        <div class="d-flex gap-2 mb-2" id="editAccCoordsBadge" style="display:none">
+                            <small class="text-success" id="editAccCoordsDisplay"></small>
+                            <button type="button" class="btn btn-link btn-sm text-danger p-0"
+                                    title="Effacer les coordonnées" onclick="clearEditAccCoords()">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
+                        <input type="hidden" id="editAccLatitude"  name="latitude"  th:value="*{latitude}"/>
+                        <input type="hidden" id="editAccLongitude" name="longitude" th:value="*{longitude}"/>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-semibold" for="editComment">Commentaire</label>
+                            <textarea id="editComment" class="form-control" rows="3"
+                                      th:field="*{comment}"></textarea>
+                        </div>
+
+                        <div class="d-flex gap-2">
+                            <button type="submit" class="btn btn-primary btn-sm flex-grow-1">
+                                <i class="bi bi-save me-1"></i>Enregistrer
+                            </button>
+                            <a th:href="@{/trips/{id}/accommodations(id=${trip.id})}"
+                               class="btn btn-outline-secondary btn-sm">Annuler</a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- ════════════════════════════════════════════════════
+         Modal — Sélecteur de carte (OpenStreetMap / Leaflet)
+    ═══════════════════════════════════════════════════════ -->
+    <div sec:authorize="hasRole('ADMIN')" class="modal fade" id="accMapPickerModal" tabindex="-1"
+         aria-labelledby="accMapPickerLabel" aria-hidden="true">
+        <div class="modal-dialog modal-xl modal-fullscreen-md-down">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title" id="accMapPickerLabel">
+                        <i class="bi bi-globe-europe-africa me-2"></i>Sélectionner un emplacement sur la carte
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body p-0">
+                    <div id="accMapPickerContainer"></div>
+                    <div class="p-3 border-top bg-light">
+                        <div class="row g-2 align-items-end">
+                            <div class="col-sm-5">
+                                <label class="form-label small fw-semibold mb-1" for="accMapPickerLat">Latitude</label>
+                                <input type="text" id="accMapPickerLat" class="form-control form-control-sm" readonly placeholder="–"/>
+                            </div>
+                            <div class="col-sm-5">
+                                <label class="form-label small fw-semibold mb-1" for="accMapPickerLon">Longitude</label>
+                                <input type="text" id="accMapPickerLon" class="form-control form-control-sm" readonly placeholder="–"/>
+                            </div>
+                            <div class="col-sm-2">
+                                <button type="button" class="btn btn-sm btn-outline-warning w-100"
+                                        id="accMapPickerLocateMe" title="Utiliser ma position actuelle">
+                                    <i class="bi bi-geo-alt-fill"></i> Ma position
+                                </button>
+                            </div>
+                        </div>
+                        <p class="text-muted small mt-2 mb-0">
+                            <i class="bi bi-info-circle me-1"></i>Cliquez sur la carte pour placer le marqueur et renseigner les coordonnées.
+                        </p>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Annuler</button>
+                    <button type="button" class="btn btn-success" id="accMapPickerConfirm" disabled>
+                        <i class="bi bi-check-lg me-1"></i>Confirmer la position
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</th:block>
+
+<th:block th:fragment="extraScripts">
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script>
+(function () {
+    let accMapPickerMap    = null;
+    let accMapPickerMarker = null;
+    let accMapPickerContext = null; // 'create' | 'edit'
+    let accMapPickerSelectedLat = null;
+    let accMapPickerSelectedLon = null;
+
+    function initAccMapPicker() {
+        if (accMapPickerMap) {
+            setTimeout(function() { accMapPickerMap.invalidateSize(); }, 300);
+            return;
+        }
+        accMapPickerMap = L.map('accMapPickerContainer').setView([46.2276, 2.2137], 5);
+        L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+            attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+            maxZoom: 19
+        }).addTo(accMapPickerMap);
+
+        accMapPickerMap.on('click', function(e) {
+            setAccMapPickerPoint(e.latlng.lat, e.latlng.lng);
+        });
+
+        document.getElementById('accMapPickerLocateMe').addEventListener('click', function() {
+            if (!navigator.geolocation) {
+                alert('La géolocalisation n\'est pas supportée par votre navigateur.');
+                return;
+            }
+            navigator.geolocation.getCurrentPosition(function(pos) {
+                setAccMapPickerPoint(pos.coords.latitude, pos.coords.longitude);
+                accMapPickerMap.setView([pos.coords.latitude, pos.coords.longitude], 14);
+            }, function() {
+                alert('Impossible d\'obtenir votre position.');
+            });
+        });
+
+        document.getElementById('accMapPickerConfirm').addEventListener('click', function() {
+            if (accMapPickerSelectedLat === null) return;
+            applyAccMapPickerCoords(accMapPickerSelectedLat, accMapPickerSelectedLon);
+            bootstrap.Modal.getInstance(document.getElementById('accMapPickerModal')).hide();
+        });
+    }
+
+    function setAccMapPickerPoint(lat, lon) {
+        accMapPickerSelectedLat = lat;
+        accMapPickerSelectedLon = lon;
+
+        const latStr = lat.toFixed(6);
+        const lonStr = lon.toFixed(6);
+        document.getElementById('accMapPickerLat').value = latStr;
+        document.getElementById('accMapPickerLon').value = lonStr;
+        document.getElementById('accMapPickerConfirm').disabled = false;
+
+        if (accMapPickerMarker) {
+            accMapPickerMarker.setLatLng([lat, lon]);
+        } else {
+            accMapPickerMarker = L.marker([lat, lon], { draggable: true }).addTo(accMapPickerMap);
+            accMapPickerMarker.on('dragend', function() {
+                const ll = accMapPickerMarker.getLatLng();
+                setAccMapPickerPoint(ll.lat, ll.lng);
+            });
+        }
+        accMapPickerMarker.bindPopup(latStr + ', ' + lonStr).openPopup();
+    }
+
+    function applyAccMapPickerCoords(lat, lon) {
+        const latStr = lat.toFixed(6);
+        const lonStr = lon.toFixed(6);
+        if (accMapPickerContext === 'create') {
+            document.getElementById('newAccLatitude').value  = latStr;
+            document.getElementById('newAccLongitude').value = lonStr;
+            refreshAccCoordsBadge('new', latStr, lonStr);
+        } else if (accMapPickerContext === 'edit') {
+            document.getElementById('editAccLatitude').value  = latStr;
+            document.getElementById('editAccLongitude').value = lonStr;
+            refreshAccCoordsBadge('edit', latStr, lonStr);
+        }
+    }
+
+    function refreshAccCoordsBadge(ctx, lat, lon) {
+        const prefix = ctx === 'new' ? 'newAcc' : 'editAcc';
+        const badge   = document.getElementById(prefix + 'CoordsBadge');
+        const display = document.getElementById(prefix + 'CoordsDisplay');
+        if (!badge || !display) return;
+        if (lat && lon && String(lat).trim() !== '' && String(lon).trim() !== '') {
+            display.textContent = '📍 ' + parseFloat(lat).toFixed(6) + ', ' + parseFloat(lon).toFixed(6);
+            badge.style.display = 'flex';
+        } else {
+            display.textContent = '';
+            badge.style.display = 'none';
+        }
+    }
+
+    window.clearNewAccCoords = function() {
+        document.getElementById('newAccLatitude').value  = '';
+        document.getElementById('newAccLongitude').value = '';
+        refreshAccCoordsBadge('new', '', '');
+    };
+
+    window.clearEditAccCoords = function() {
+        document.getElementById('editAccLatitude').value  = '';
+        document.getElementById('editAccLongitude').value = '';
+        refreshAccCoordsBadge('edit', '', '');
+    };
+
+    window.openAccMapPicker = function(context) {
+        accMapPickerContext = context;
+
+        let existingLat = null, existingLon = null;
+        if (context === 'create') {
+            existingLat = parseFloat(document.getElementById('newAccLatitude').value) || null;
+            existingLon = parseFloat(document.getElementById('newAccLongitude').value) || null;
+        } else if (context === 'edit') {
+            existingLat = parseFloat(document.getElementById('editAccLatitude').value) || null;
+            existingLon = parseFloat(document.getElementById('editAccLongitude').value) || null;
+        }
+
+        document.getElementById('accMapPickerLat').value = existingLat ? existingLat.toFixed(6) : '';
+        document.getElementById('accMapPickerLon').value = existingLon ? existingLon.toFixed(6) : '';
+        document.getElementById('accMapPickerConfirm').disabled = (existingLat === null);
+        accMapPickerSelectedLat = existingLat;
+        accMapPickerSelectedLon = existingLon;
+
+        const modal = new bootstrap.Modal(document.getElementById('accMapPickerModal'));
+        modal.show();
+
+        document.getElementById('accMapPickerModal').addEventListener('shown.bs.modal', function handler() {
+            initAccMapPicker();
+            setTimeout(function() { accMapPickerMap.invalidateSize(); }, 200);
+
+            if (accMapPickerMarker) {
+                accMapPickerMap.removeLayer(accMapPickerMarker);
+                accMapPickerMarker = null;
+            }
+
+            if (existingLat !== null && existingLon !== null) {
+                accMapPickerMap.setView([existingLat, existingLon], 14);
+                setAccMapPickerPoint(existingLat, existingLon);
+            } else {
+                accMapPickerMap.setView([46.2276, 2.2137], 5);
+            }
+            document.getElementById('accMapPickerModal').removeEventListener('shown.bs.modal', handler);
+        }, { once: false });
+    };
+
+    // Initialiser le badge si coordonnées déjà présentes (ex : après erreur de validation)
+    (function() {
+        const newLat = document.getElementById('newAccLatitude');
+        const newLon = document.getElementById('newAccLongitude');
+        if (newLat && newLon && newLat.value && newLon.value) {
+            refreshAccCoordsBadge('new', newLat.value, newLon.value);
+        }
+        const editLat = document.getElementById('editAccLatitude');
+        const editLon = document.getElementById('editAccLongitude');
+        if (editLat && editLon && editLat.value && editLon.value) {
+            refreshAccCoordsBadge('edit', editLat.value, editLon.value);
+        }
+    })();
+
+})();
+</script>
+</th:block>
+
+</body>
+</html>

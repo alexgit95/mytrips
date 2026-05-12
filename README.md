@@ -233,9 +233,47 @@ Le graphique linéaire affiche trois séries :
 
 Formulaire d'ajout/édition avec : date, libellé, catégorie (icône + nom), montant, et nombre de jours (pour les dépenses qui s'étalent sur plusieurs jours, ex. location de voiture — le montant est réparti équitablement sur chaque jour pour le calcul du graphique).
 
+### Logements
+
+Chaque voyage peut avoir **0, 1 ou plusieurs logements** (hôtels, AirBnB, camping…) enregistrés, accessibles via le bouton **🏠 Logements** depuis la page de détail du voyage.
+
+Un logement contient :
+- **Nom** (obligatoire) : nom de l'établissement
+- **Adresse** : adresse postale
+- **Date d'arrivée** et **date de départ** (obligatoires)
+- **Coordonnées GPS** (latitude / longitude) — permettent l'affichage sur la carte Road Trip
+- **Commentaire** : informations pratiques, contacts, code d'accès…
+
+Ces logements sont utilisés de deux façons :
+- **Planner** : chaque jour de la timeline affiche un badge **🏠 violet** indiquant le logement actif ce jour-là (arrivalDate ≤ jour < departureDate)
+- **Road Trip** : les logements géocodés apparaissent sur la carte avec un **marqueur violet** en forme de maison, filtré automatiquement lors du zoom par jour
+
+La gestion des logements est réservée aux administrateurs ; tous les rôles peuvent les consulter.
+
+Lors de la saisie d'un logement, un **bouton 🌍** à côté du champ Adresse ouvre la même **modale de sélection sur carte OpenStreetMap** que dans le planner, permettant de positionner précisément le logement sur la carte.
+
 ### Planner
 
 Planificateur d'événements par voyage. Chaque événement contient : date, heure, titre, description, localisation géographique (utilisée pour la résolution pays/département sur la page Monde). Les événements sont affichés sous forme de timeline verticale groupée par journée.
+
+#### Saisie des coordonnées GPS via la carte
+
+À côté du champ **Lieu / Adresse**, un bouton 🌍 ouvre une **modale de sélection sur carte OpenStreetMap** (Leaflet). L'utilisateur peut :
+
+- Cliquer n'importe où sur la carte pour placer un marqueur (déplaçable par glisser-déposer)
+- Utiliser le bouton **Ma position** pour centrer la carte sur sa position GPS actuelle
+- Confirmer la sélection pour renseigner automatiquement la **latitude** et la **longitude** de l'événement
+
+Après chaque sélection sur la carte, un **reverse geocoding automatique** interroge l'endpoint `/geocode` pour tenter de remplir le champ adresse avec le nom du lieu (si le géocodage est activé, sinon les coordonnées sont utilisées comme adresse de secours).
+
+Les coordonnées peuvent être saisies **avec ou sans adresse texte**. Elles apparaissent dans une pastille verte sous le champ d'adresse, et peuvent être effacées individuellement. Cette fonctionnalité est disponible à la fois lors de la **création** et de la **modification** d'un événement.
+
+Si une adresse est renseignée sans coordonnées, le service tente un **géocodage forward automatique** (Nominatim, si `GEOCODING_ENABLED=true`) lors de la sauvegarde.
+
+Quand un événement possède des coordonnées GPS (sans adresse texte), la timeline affiche les coordonnées et propose un lien direct vers **Google Maps**. Ces coordonnées sont réutilisées automatiquement par les autres fonctionnalités :
+
+- **Carte du monde** (marqueurs d'étapes GPS précis)
+- **Road Trip** (tracé d'itinéraire interactif)
 
 ### Road Trip
 
@@ -244,11 +282,20 @@ La vue **Road Trip** est accessible depuis la page de détail d'un voyage **term
 Elle affiche :
 
 - Une **carte OpenStreetMap interactive** avec tous les points GPS du voyage reliés dans l'ordre chronologique
+- Les **logements du voyage** représentés par un **marqueur 🏠 violet** sur la carte, avec popup (nom, adresse, dates d'arrivée/départ, commentaire) — uniquement les logements géocodés (latitude/longitude renseignée)
 - Un **sélecteur de date (timeline)** permettant de filtrer la carte sur une journée précise — avec un bouton « 🗺 Tout le voyage » pour revenir à la vue complète
 - Un **itinéraire routier stylisé** avec dégradé de couleurs (orange → bleu) reprenant les routes réelles via l'API OSRM
-- Des **marqueurs numérotés** pour chaque étape avec popup (nom, localisation, date)
+- Des **marqueurs numérotés** pour chaque étape avec popup (nom, localisation ou coordonnées GPS, date)
 - La **distance totale du trajet** calculée via OSRM (ou à vol d'oiseau si l'API est indisponible)
-- La **liste détaillée des étapes** avec numéro, nom, localisation et date
+- La **liste détaillée des étapes** avec numéro, nom, localisation (ou coordonnées en fallback), heure, date et commentaire
+
+Lors du filtrage par jour, les **marqueurs maison sont aussi filtrés** : seuls les logements dont la période d'occupation chevauche les dates affichées restent visibles.
+
+Quand un **jour précis** est sélectionné et qu'un logement géocodé est actif ce jour-là, l'**itinéraire intègre automatiquement le logement** comme point de départ et de retour :
+- La route calculée est : **logement → étape 1 → … → étape N → logement**
+- La distance affichée est donc la **distance aller-retour depuis le logement**
+- La liste des étapes affiche le logement en tête et en queue avec un badge **🛏 Logement** violet
+- Si un seul waypoint planner existe ce jour-là (pas assez pour une route sans logement), l'itinéraire logement → waypoint → logement est quand même calculé
 
 #### Filtrage par pays d'origine
 

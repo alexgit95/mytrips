@@ -7,6 +7,110 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.8.0] - 2026-05-12
+
+### Nouveautés
+
+#### Logements — sélecteur de position sur carte OpenStreetMap
+
+- Ajout d'un **bouton 🌍** à côté du champ « Adresse » dans le formulaire de création et d'édition d'un logement
+- Un clic ouvre une **modale plein-écran (responsive)** avec une carte interactive **OpenStreetMap via Leaflet**, identique à celle du planner
+- L'utilisateur peut :
+  - **Cliquer sur la carte** pour placer un marqueur et capturer latitude / longitude
+  - **Déplacer le marqueur** par glisser-déposer pour affiner la position
+  - Utiliser le bouton **« Ma position »** pour centrer la carte sur sa géolocalisation GPS actuelle
+  - **Confirmer** la sélection pour renseigner automatiquement les coordonnées dans le formulaire
+- Les coordonnées s'affichent dans une **pastille verte** sous le champ d'adresse, avec un bouton pour les effacer
+- La carte se **réouvre centrée** sur les coordonnées déjà enregistrées lors d'une modification
+- Les champs de saisie manuelle latitude/longitude sont remplacés par ce sélecteur cartographique
+
+#### Road Trip — itinéraire aller-retour depuis le logement
+
+- Quand un **jour précis** est sélectionné dans la timeline et qu'un **logement géocodé** est actif ce jour-là, l'itinéraire intègre automatiquement le logement comme **point de départ et de retour**
+- La route calculée est : **logement → étape 1 → … → étape N → logement**
+- La distance affichée est la **distance aller-retour totale depuis le logement**
+- La **liste des étapes** affiche le logement en tête et en queue avec un badge violet **🛏 Logement**
+- Fonctionne avec un seul waypoint planner (logement → waypoint → logement)
+- En vue **« Tout le voyage »**, le comportement est inchangé (pas de bouclage sur logement)
+- La note de distance précise « Aller-retour depuis le logement · distance routière via OSRM »
+
+---
+
+## [2.7.0] - 2026-05-12
+
+### Nouveautés
+
+#### Logements par voyage
+
+- Ajout d'une entité **`Accommodation`** (logement) liée à chaque voyage (relation OneToMany)
+- Chaque logement contient : **nom** (obligatoire), **adresse**, **date d'arrivée**, **date de départ**, **coordonnées GPS** (latitude/longitude) et **commentaire**
+- Nouvelle page **`/trips/{id}/accommodations`** (bouton 🏠 sur la page de détail du voyage) permettant de :
+  - Lister tous les logements du voyage ordonnés par date d'arrivée
+  - Ajouter un logement (ADMIN)
+  - Modifier un logement (ADMIN)
+  - Supprimer un logement (ADMIN)
+
+#### Planner — affichage du logement actif par jour
+
+- Dans la **timeline du planner**, chaque journée affiche désormais un **badge 🏠 violet** indiquant le logement actif ce jour-là (règle : `arrivalDate ≤ jour < departureDate`)
+- Si une adresse est renseignée, elle s'affiche à côté du nom du logement dans le badge
+- Compatibilité null-safe : si aucun logement n'est défini, la timeline s'affiche normalement
+
+#### Road Trip — marqueurs maison sur la carte
+
+- Les logements possédant des **coordonnées GPS** (lat/lng) sont affichés sur la carte Road Trip sous forme de **marqueurs violets 🏠**
+- Chaque popup de marqueur maison affiche : nom, adresse (si disponible), plage de dates (arrivée → départ), commentaire
+- Les marqueurs maison sont **filtrés par période** lors du filtrage par jour (seuls les logements dont la plage chevauche les dates visibles sont affichés)
+- Si aucun waypoint n'est disponible mais que des logements géocodés existent, la carte se centre sur ces logements
+
+#### Export / Import JSON
+
+- L'export JSON inclut désormais un tableau `accommodations` avec tous les logements de tous les voyages
+- L'import JSON restaure les logements et les associe aux voyages correspondants
+- Compatibilité ascendante préservée : les anciens fichiers JSON sans `accommodations` sont importés sans erreur
+
+---
+
+## [2.6.0] - 2026-05-12
+
+### Nouveautés
+
+#### Planner — sélecteur de position sur carte OpenStreetMap
+
+- Ajout d'un **bouton 🌍** à côté du champ « Lieu / Adresse » dans le formulaire de création et la modale de modification d'un événement
+- Un clic ouvre une **modale plein-écran (responsive)** avec une carte interactive **OpenStreetMap via Leaflet**
+- L'utilisateur peut :
+  - **Cliquer sur la carte** pour placer un marqueur et capturer latitude / longitude
+  - **Déplacer le marqueur** par glisser-déposer pour affiner la position
+  - Utiliser le bouton **« Ma position »** pour centrer la carte sur sa géolocalisation GPS actuelle
+  - **Confirmer** la sélection pour renseigner les coordonnées dans le formulaire
+- Après chaque sélection sur la carte, un **reverse geocoding automatique** (via l'endpoint `/geocode` existant) tente de remplir le champ adresse avec le nom du lieu correspondant
+- Les coordonnées s'affichent dans une **pastille verte** sous le champ d'adresse, avec un bouton pour les effacer
+- Les coordonnées peuvent être saisies **sans adresse texte**, pour les lieux sans adresse postale
+- La carte se **réouvre centrée** sur les coordonnées déjà enregistrées lors d'une modification
+- Dans la **timeline**, un événement sans adresse mais avec coordonnées affiche les coordonnées GPS et un lien Google Maps direct
+
+#### Road Trip — étapes sans adresse désormais visibles
+
+- Les événements planner **sans adresse texte** mais possédant des coordonnées GPS sont maintenant inclus dans la vue Road Trip
+- Dans la liste des étapes et les popups de la carte, les coordonnées (`lat, lng`) s'affichent en fallback quand aucune adresse n'est disponible
+- L'**heure** de l'événement est désormais affichée dans la liste des étapes (à côté de la date)
+- Le **commentaire** de l'événement est affiché en italique sous la date dans la liste des étapes (si renseigné)
+- Message d'alerte mis à jour pour mentionner le sélecteur de carte comme alternative au géocodage
+
+### Améliorations
+
+#### Planner — géocodage automatique à la création/modification
+
+- À la création ou modification d'un événement, si une adresse est renseignée sans coordonnées, le service tente automatiquement un **géocodage forward** via Nominatim (si `GEOCODING_ENABLED=true`) pour renseigner latitude/longitude
+
+#### Planner — propagation des coordonnées lors de la modification
+
+- Le service de mise à jour (`PlannerEventService.update`) propage désormais les coordonnées latitude/longitude depuis le formulaire au lieu de les effacer automatiquement lors d'un changement d'adresse
+- La création d'un événement conserve les coordonnées même si aucune adresse texte n'est renseignée (suppression de la réinitialisation automatique lat/lon)
+
+---
+
 ## [2.5.2] - 2026-05-05
 
 ### Améliorations

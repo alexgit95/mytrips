@@ -40,6 +40,11 @@
             border-left: 4px solid #fd7e14;
         }
 
+        /* Marqueur logement (maison) */
+        .rt-house-marker svg {
+            filter: drop-shadow(0 2px 3px rgba(0,0,0,.35));
+        }
+
         /* Légende de l'itinéraire */
         #waypoint-list .step-num {
             width: 28px;
@@ -121,6 +126,7 @@
     <!-- Données JSON pour le JS -->
     <div id="rt-data"
          th:attr="data-waypoints=${waypointsJson},
+                  data-accommodations=${accommodationsJson},
                   data-trip-name=${trip.name},
                   data-is-abroad=${isAbroad},
                   data-home-country=${homeCountry}"
@@ -249,6 +255,7 @@
     /* ─── Données serveur ───────────────────────────────────────────────────── */
     const rtDataEl  = document.getElementById('rt-data');
     const allWps    = JSON.parse(rtDataEl.dataset.waypoints || '[]');
+    const allAccommodations = JSON.parse(rtDataEl.dataset.accommodations || '[]');
 
     /* ─── Stats durée (globales, ne change pas au filtrage) ─────────────────── */
     if (allWps.length >= 2) {
@@ -259,7 +266,7 @@
 
     /* ─── Alerte aucun point ────────────────────────────────────────────────── */
     if (allWps.length === 0) {
-        showAlert("Aucun point GPS disponible pour ce voyage (assurez-vous que le géocodage est activé dans l'administration).");
+        showAlert("Aucun point GPS disponible pour ce voyage. Ajoutez des coordonnées aux événements du planner via le sélecteur de carte ou activez le géocodage dans l'administration.");
         document.getElementById('total-distance').textContent = '—';
         document.getElementById('nb-waypoints').textContent   = '0';
         document.getElementById('trip-duration').textContent  = '—';
@@ -275,6 +282,10 @@
 
     if (allWps.length === 0) {
         map.setView([46.2, 2.2], 5);
+        // Afficher quand même les logements si disponibles
+        if (allAccommodations.length > 0) {
+            renderAccommodationMarkersOnly();
+        }
         return;
     }
 
@@ -297,20 +308,72 @@
     function renderView(wps) {
         clearDynamicLayers();
 
+        /* ── Logements : filtrés selon la date active du sélecteur ─────────── */
+        const activeBtn    = document.querySelector('#date-timeline .rt-date-btn.active');
+        const selectedDate = activeBtn ? activeBtn.dataset.date : 'all';
+
+        const visibleAccommodations = allAccommodations.filter(function (acc) {
+            if (selectedDate === 'all') return true;
+            // Le logement est actif ce jour si : arrivalDate <= selectedDate < departureDate
+            return selectedDate >= acc.arrivalDate && selectedDate < acc.departureDate;
+        });
+
+        /* ── Logement actif utilisé comme point de départ/retour ─────────── */
+        const activeAcc = (selectedDate !== 'all')
+            ? (visibleAccommodations.find(function(a) { return a.lat && a.lng; }) || null)
+            : null;
+
+        /* Étendre les points de routage avec le logement (départ + retour) */
+        let routeWps = wps;
+        if (activeAcc && wps.length >= 1) {
+            const accPt = { lat: activeAcc.lat, lng: activeAcc.lng };
+            routeWps = [accPt].concat(wps).concat([accPt]);
+        }
+
         document.getElementById('nb-waypoints').textContent   = wps.length;
-        document.getElementById('total-distance').textContent  = wps.length >= 2 ? 'Calcul…' : '—';
+        document.getElementById('total-distance').textContent  = routeWps.length >= 2 ? 'Calcul…' : '—';
         document.getElementById('distance-note').textContent   = '';
         hideAlert();
-        buildWaypointList(wps);
+        buildWaypointList(wps, activeAcc);
 
+        visibleAccommodations.forEach(function (acc) {
+            const houseIcon = L.divIcon({
+                className: 'rt-house-marker',
+                html: `<svg width="34" height="44" viewBox="0 0 34 44" xmlns="http://www.w3.org/2000/svg">
+                         <path d="M17 0C7.61 0 0 7.61 0 17c0 11.9 17 27 17 27S34 28.9 34 17C34 7.61 26.39 0 17 0z"
+                               fill="#6f42c1" stroke="#fff" stroke-width="2.5"/>
+                         <text x="17" y="21" text-anchor="middle" dominant-baseline="middle"
+                               font-size="17" fill="white">🏠</text>
+                       </svg>`,
+                iconSize: [34, 44],
+                iconAnchor: [17, 44],
+                popupAnchor: [0, -44]
+            });
+            const houseMarker = L.marker([acc.lat, acc.lng], {icon: houseIcon, zIndexOffset: 1000});
+            houseMarker.bindPopup(
+                `<div style="min-width:180px">
+                 <strong style="color:#6f42c1;font-size:1rem">🏠 ${escapeHtml(acc.name)}</strong><br/>
+                 ${acc.address ? `<div class="text-muted small mt-1"><i class="bi bi-geo-alt"></i> ${escapeHtml(acc.address)}</div>` : ''}
+                 <div class="text-muted small mt-1">📅 ${formatDate(acc.arrivalDate)} → ${formatDate(acc.departureDate)}</div>
+                 ${acc.comment ? `<div class="text-muted small fst-italic mt-1">${escapeHtml(acc.comment)}</div>` : ''}
+                 </div>`
+            );
+            addLayer(houseMarker);
+        });
+
+        /* ── Si aucun waypoint ce jour, centrer sur les logements si dispo ── */
         if (wps.length === 0) {
             document.getElementById('total-distance').textContent = '—';
-            document.getElementById('distance-note').textContent  = 'Aucun point pour cette journée';
-            buildWaypointList([]);
+            document.getElementById('distance-note').textContent  = 'Aucun point planner pour cette journée';
+            if (visibleAccommodations.length > 0) {
+                const pts = visibleAccommodations.map(a => [a.lat, a.lng]);
+                if (pts.length === 1) { map.setView(pts[0], 14); }
+                else { map.fitBounds(L.latLngBounds(pts), {padding: [60, 60]}); }
+            }
             return;
         }
 
-        /* Marqueurs */
+        /* ── Marqueurs waypoints ─────────────────────────────────────────── */
         const colors = generateGradientColors(wps.length, '#fd7e14', '#0d6efd');
         wps.forEach(function (wp, i) {
             const color   = colors[i];
@@ -332,16 +395,16 @@
             const marker = L.marker([wp.lat, wp.lng], {icon: svgIcon});
             marker.bindPopup(
                 `<strong>${escapeHtml(wp.name)}</strong><br/>
-                 <span class="text-muted small">${escapeHtml(wp.location || '')}</span><br/>
+                 <span class="text-muted small">${escapeHtml(wp.location || (wp.lat.toFixed(5) + ', ' + wp.lng.toFixed(5)))}</span><br/>
                  <span class="badge bg-secondary mt-1">${badge}</span><br/>
                  <span class="text-muted small">${wp.date}</span>`
             );
             addLayer(marker);
         });
 
-        /* Itinéraire */
-        if (wps.length >= 2) {
-            fetchOsrmRoute(wps);
+        /* ── Itinéraire ─────────────────────────────────────────────────── */
+        if (routeWps.length >= 2) {
+            fetchOsrmRoute(routeWps, !!activeAcc);
         } else {
             map.setView([wps[0].lat, wps[0].lng], 12);
             document.getElementById('total-distance').textContent = '—';
@@ -401,7 +464,7 @@
     /*  FONCTIONS ROUTAGE                                                          */
     /* ══════════════════════════════════════════════════════════════════════════ */
 
-    function fetchOsrmRoute(wps) {
+    function fetchOsrmRoute(wps, withAcc) {
         const coords = wps.map(w => w.lng + ',' + w.lat).join(';');
         const url = `https://router.project-osrm.org/route/v1/driving/${coords}` +
                     `?overview=full&geometries=geojson&steps=false`;
@@ -416,15 +479,15 @@
                     throw new Error('Aucun itinéraire trouvé');
                 }
                 const route = data.routes[0];
-                drawRoute(route.geometry.coordinates, route.distance, wps);
+                drawRoute(route.geometry.coordinates, route.distance, wps, withAcc);
             })
             .catch(err => {
                 console.warn('OSRM routing échoué, tracé en ligne droite :', err);
-                drawFallbackPolyline(wps);
+                drawFallbackPolyline(wps, withAcc);
             });
     }
 
-    function drawRoute(coords, distanceMeters, wps) {
+    function drawRoute(coords, distanceMeters, wps, withAcc) {
         const latLngs = coords.map(c => [c[1], c[0]]);
 
         const segments = splitIntoSegments(latLngs, 200);
@@ -447,10 +510,12 @@
 
         const km = (distanceMeters / 1000).toFixed(0);
         document.getElementById('total-distance').textContent = km + ' km';
-        document.getElementById('distance-note').textContent  = 'Distance routière calculée via OSRM';
+        document.getElementById('distance-note').textContent  = withAcc
+            ? 'Aller-retour depuis le logement · distance routière via OSRM'
+            : 'Distance routière calculée via OSRM';
     }
 
-    function drawFallbackPolyline(wps) {
+    function drawFallbackPolyline(wps, withAcc) {
         const latLngs = wps.map(w => [w.lat, w.lng]);
         let totalKm   = 0;
 
@@ -470,7 +535,9 @@
         const bounds = L.latLngBounds(latLngs);
         map.fitBounds(bounds, {padding: [40, 40]});
         document.getElementById('total-distance').textContent = Math.round(totalKm) + ' km';
-        document.getElementById('distance-note').textContent  = 'Distance à vol d\'oiseau (routage OSRM indisponible)';
+        document.getElementById('distance-note').textContent  = withAcc
+            ? 'Aller-retour depuis le logement · distance à vol d\'oiseau (OSRM indisponible)'
+            : 'Distance à vol d\'oiseau (routage OSRM indisponible)';
         showAlert('Le calcul d\'itinéraire routier est temporairement indisponible. La distance affichée est estimée à vol d\'oiseau.');
     }
 
@@ -502,13 +569,32 @@
         return segs.length ? segs : [latLngs];
     }
 
-    function buildWaypointList(wps) {
+    function buildWaypointList(wps, activeAcc) {
         const container = document.getElementById('waypoint-list');
         container.innerHTML = '';
-        if (!wps.length) {
+        if (!wps.length && !activeAcc) {
             container.innerHTML = '<p class="text-muted text-center py-3">Aucune étape à afficher pour cette journée.</p>';
             return;
         }
+
+        function makeAccRow(isLast) {
+            const row = document.createElement('div');
+            row.className = 'd-flex align-items-start gap-3 py-2';
+            row.innerHTML = `
+                <div class="d-flex flex-column align-items-center">
+                    <div class="step-num" style="background:#6f42c1;font-size:.75rem">🏠</div>
+                    ${!isLast ? '<div class="step-line flex-grow-1" style="height:24px;background:linear-gradient(to bottom,#6f42c1,#fd7e14)"></div>' : ''}
+                </div>
+                <div class="pb-1">
+                    <div class="fw-semibold" style="color:#6f42c1">${escapeHtml(activeAcc.name)}</div>
+                    ${activeAcc.address ? `<div class="text-muted small"><i class="bi bi-geo-alt me-1"></i>${escapeHtml(activeAcc.address)}</div>` : ''}
+                    <span class="badge mt-1" style="background:#6f42c1;color:#fff;font-size:.7rem">🛏 Logement</span>
+                </div>`;
+            return row;
+        }
+
+        if (activeAcc) container.appendChild(makeAccRow(wps.length === 0));
+
         wps.forEach(function (wp, i) {
             const isLast = i === wps.length - 1;
             const step   = document.createElement('div');
@@ -516,15 +602,18 @@
             step.innerHTML = `
                 <div class="d-flex flex-column align-items-center">
                     <div class="step-num">${i + 1}</div>
-                    ${!isLast ? '<div class="step-line flex-grow-1" style="height:24px"></div>' : ''}
+                    ${(!isLast || activeAcc) ? '<div class="step-line flex-grow-1" style="height:24px"></div>' : ''}
                 </div>
                 <div class="pb-1">
                     <div class="fw-semibold">${escapeHtml(wp.name)}</div>
-                    <div class="text-muted small">${escapeHtml(wp.location || '')}</div>
-                    <div class="text-muted small"><i class="bi bi-calendar3 me-1"></i>${wp.date}</div>
+                    <div class="text-muted small">${escapeHtml(wp.location || (wp.lat.toFixed(5) + ', ' + wp.lng.toFixed(5)))}</div>
+                    <div class="text-muted small"><i class="bi bi-calendar3 me-1"></i>${wp.date} <i class="bi bi-clock ms-2 me-1"></i>${wp.time}</div>
+                    ${wp.comment ? `<div class="text-muted small fst-italic mt-1"><i class="bi bi-chat-text me-1"></i>${escapeHtml(wp.comment)}</div>` : ''}
                 </div>`;
             container.appendChild(step);
         });
+
+        if (activeAcc && wps.length >= 1) container.appendChild(makeAccRow(true));
     }
 
     /* ─── Utilitaires ────────────────────────────────────────────────────────── */
@@ -559,6 +648,37 @@
         return String(str)
             .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
             .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    }
+
+    function renderAccommodationMarkersOnly() {
+        allAccommodations.forEach(function (acc) {
+            const houseIcon = L.divIcon({
+                className: 'rt-house-marker',
+                html: `<svg width="32" height="42" viewBox="0 0 32 42" xmlns="http://www.w3.org/2000/svg">
+                         <path d="M16 0C7.16 0 0 7.16 0 16c0 11.3 16 26 16 26S32 27.3 32 16C32 7.16 24.84 0 16 0z"
+                               fill="#6f42c1" stroke="#fff" stroke-width="2"/>
+                         <text x="16" y="20" text-anchor="middle" dominant-baseline="middle"
+                               font-size="16" fill="white">🏠</text>
+                       </svg>`,
+                iconSize: [32, 42],
+                iconAnchor: [16, 42],
+                popupAnchor: [0, -42]
+            });
+            const houseMarker = L.marker([acc.lat, acc.lng], {icon: houseIcon});
+            houseMarker.addTo(map);
+            houseMarker.bindPopup(
+                `<strong>🏠 ${escapeHtml(acc.name)}</strong><br/>
+                 ${acc.address ? `<span class="text-muted small">${escapeHtml(acc.address)}</span><br/>` : ''}
+                 <span class="text-muted small">📅 ${formatDate(acc.arrivalDate)} → ${formatDate(acc.departureDate)}</span>
+                 ${acc.comment ? `<br/><span class="text-muted small fst-italic">${escapeHtml(acc.comment)}</span>` : ''}`
+            );
+        });
+        const latLngs = allAccommodations.map(a => [a.lat, a.lng]);
+        if (latLngs.length === 1) {
+            map.setView(latLngs[0], 12);
+        } else {
+            map.fitBounds(L.latLngBounds(latLngs), {padding: [40, 40]});
+        }
     }
 
     function showAlert(msg) {

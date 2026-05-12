@@ -65,12 +65,13 @@ class BackupFormatCompatibilityTest {
                 .expenses(java.util.List.of())
                 .plannerEvents(java.util.List.of())
                 .users(java.util.List.of())
+                .accommodations(java.util.List.of())
                 .build();
 
         String json = objectMapper().writeValueAsString(dto);
         JsonNode root = objectMapper().readTree(json);
 
-        Set<String> expected = Set.of("categories", "trips", "expenses", "plannerEvents", "users");
+        Set<String> expected = Set.of("categories", "trips", "expenses", "plannerEvents", "users", "accommodations");
         expected.forEach(key -> assertTrue(root.has(key), "Missing top-level key: " + key));
     }
 }

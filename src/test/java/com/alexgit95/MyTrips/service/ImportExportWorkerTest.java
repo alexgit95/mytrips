@@ -1,16 +1,19 @@
 package com.alexgit95.MyTrips.service;
 
+import com.alexgit95.MyTrips.dto.AccommodationExportDto;
 import com.alexgit95.MyTrips.dto.CategoryExportDto;
 import com.alexgit95.MyTrips.dto.ExpenseExportDto;
 import com.alexgit95.MyTrips.dto.ExportDto;
 import com.alexgit95.MyTrips.dto.PlannerEventExportDto;
 import com.alexgit95.MyTrips.dto.TripExportDto;
 import com.alexgit95.MyTrips.dto.UserExportDto;
+import com.alexgit95.MyTrips.model.Accommodation;
 import com.alexgit95.MyTrips.model.AppUser;
 import com.alexgit95.MyTrips.model.CategoryEntity;
 import com.alexgit95.MyTrips.model.Expense;
 import com.alexgit95.MyTrips.model.PlannerEvent;
 import com.alexgit95.MyTrips.model.Trip;
+import com.alexgit95.MyTrips.repository.AccommodationRepository;
 import com.alexgit95.MyTrips.repository.AppUserRepository;
 import com.alexgit95.MyTrips.repository.CategoryRepository;
 import com.alexgit95.MyTrips.repository.ExpenseRepository;
@@ -51,6 +54,8 @@ class ImportExportWorkerTest {
     private PlannerEventRepository plannerEventRepository;
     @Mock
     private AppUserRepository appUserRepository;
+    @Mock
+    private AccommodationRepository accommodationRepository;
     @Mock
     private CategoryService categoryService;
     @Mock
@@ -104,6 +109,7 @@ class ImportExportWorkerTest {
         when(expenseRepository.findAll()).thenReturn(List.of(expense));
         when(plannerEventRepository.findAll()).thenReturn(List.of(event));
         when(appUserRepository.findAll()).thenReturn(List.of(user));
+        when(accommodationRepository.findAll()).thenReturn(List.of());
 
         when(appSettingsService.getHomeCountry()).thenReturn("FR");
         ObjectWriter writer = mock(ObjectWriter.class);
@@ -177,6 +183,7 @@ class ImportExportWorkerTest {
 
         worker.importFromJson(new ByteArrayInputStream("{}".getBytes()));
 
+        verify(accommodationRepository).deleteAll();
         verify(plannerEventRepository).deleteAll();
         verify(expenseRepository).deleteAll();
         verify(tripRepository).deleteAll();
@@ -326,7 +333,7 @@ class ImportExportWorkerTest {
         when(objectMapper.readValue(any(ByteArrayInputStream.class), eq(ExportDto.class))).thenReturn(dto);
 
         worker.importFromJson(new ByteArrayInputStream("{}".getBytes()));
-
+        verify(accommodationRepository).deleteAll();
         verify(plannerEventRepository).deleteAll();
         verify(expenseRepository).deleteAll();
         verify(tripRepository).deleteAll();

@@ -28,6 +28,9 @@ class PlannerEventServiceTest {
     @Mock
     private TripService tripService;
 
+    @Mock
+    private ForwardGeocodingService forwardGeocodingService;
+
     @InjectMocks
     private PlannerEventService service;
 
