@@ -414,4 +414,42 @@ Au premier démarrage de l'application, un utilisateur administrateur est créé
 
 Les utilisateurs et leurs rôles sont inclus dans l'export JSON. Lors d'un import, les utilisateurs sont restaurés avec leurs mots de passe hashés, permettant une restauration complète de l'application sur une nouvelle instance.
 
+### Mode hors ligne
+
+L'application supporte un **mode hors ligne** partiel pour une utilisation en voyage sans connexion internet.
+
+#### Fonctionnement
+
+- **Détection automatique** : l'application détecte la perte de réseau via les événements `online`/`offline` du navigateur, complétés par une **sonde réseau réelle** (`/actuator/health`) pour éviter les faux positifs (Wi-Fi sans internet, portail captif)
+- **Service Worker** : les pages déjà visitées et les ressources statiques sont mises en cache pour un accès hors ligne
+- **Stockage local** : les actions effectuées hors ligne (ajout de dépenses, d'événements planner) sont stockées dans **IndexedDB**
+
+#### Restrictions hors ligne
+
+- Seul l'onglet **Voyages** est accessible (les onglets Frise, Monde et Administration sont désactivés)
+- On peut consulter la **liste de tous les voyages** ; les voyages non-en-cours sont **grisés** et leur bouton « Détails » est désactivé
+- On ne peut accéder au **planner** et aux **dépenses** que pour les **voyages en cours** (dates encadrant la date du jour)
+- On peut **ajouter une dépense** ou un **événement planner** (formulaire classique ou « Ici et maintenant ») uniquement pour un voyage en cours
+- Les **dépenses en attente** sont affichées immédiatement dans le tableau avec un badge « hors ligne »
+- Les **événements planner en attente** apparaissent dans un groupe dédié en bas de la timeline
+
+#### Synchronisation
+
+- Au retour de la connexion, toutes les actions en attente sont **synchronisées automatiquement** avec le serveur
+- Endpoint dédié : `POST /api/offline/sync` (accessible aux rôles ADMIN et REPORTER)
+- **Politique de conflit** : en cas de doublon (même libellé + montant + date pour une dépense, même nom + date/heure pour un événement), la valeur du serveur a priorité et l'entrée hors ligne est ignorée
+
+#### Bandeau de statut
+
+Un **bandeau flottant** en bas de l'écran informe l'utilisateur :
+
+| État | Couleur | Message |
+|---|---|---|
+| Hors ligne avec actions en attente | Gris | « En attente de synchronisation » + compteur |
+| Hors ligne sans actions | Gris | « Mode hors ligne » |
+| Synchronisation en cours | Bleu | « Synchronisation en cours… » + compteur |
+| Synchronisation réussie | Vert | « Synchronisation réussie » (disparaît après 3 secondes) |
+| Erreur de synchronisation | Rouge | « Erreur de synchronisation — [message serveur] » (10 secondes) |
+
+> Un échec de synchronisation dû à une erreur réseau (toujours hors ligne) n'affiche pas le bandeau d'erreur — les actions restent en attente jusqu'au prochain essai.
 

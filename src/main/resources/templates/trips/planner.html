@@ -81,6 +81,9 @@
 
 <th:block th:fragment="content">
 
+    <!-- Marker for offline.js -->
+    <div id="trip-context" th:data-trip-id="${trip.id}" th:data-trip-ongoing="${trip.ongoing}" style="display:none"></div>
+
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-3">
         <ol class="breadcrumb">
@@ -116,7 +119,7 @@
                           th:text="${#maps.size(eventsByDay) == 0 ? 'Aucun événement' :
                                      #maps.size(eventsByDay) + ' jour(s)'}"></span>
                 </div>
-                <div class="card-body">
+                <div class="card-body" id="planner-timeline-body">
 
                     <!-- Empty state -->
                     <div th:if="${#maps.isEmpty(eventsByDay)}" class="text-center py-5 text-muted">
@@ -599,7 +602,7 @@
     }
 
     function createHereAndNowEvent(name, latitude, longitude, prefetchedLocation) {
-        const tripId = window.location.pathname.split('/')[2];
+        const tripId = parseInt(window.location.pathname.split('/')[2]);
         const params = new URLSearchParams();
         params.append('name', name);
         if (prefetchedLocation) {
@@ -629,15 +632,45 @@
         .then(response => response.json())
         .then(data => {
             if (data.success) {
-                // Recharger la page pour afficher le nouvel événement
                 window.location.reload();
             } else {
                 alert('Erreur: ' + data.message);
             }
         })
         .catch(error => {
-            console.error('Erreur:', error);
-            alert('Une erreur est survenue');
+            console.warn('[Offline] here-and-now fetch échoué, sauvegarde offline:', error.message);
+
+            // Sauvegarde offline via MyTripsOffline
+            if (window.MyTripsOffline) {
+                const action = {
+                    type: 'planner_event',
+                    tripId: tripId,
+                    timestamp: new Date().toISOString(),
+                    data: {
+                        name: name,
+                        eventDateTime: localDatetime,
+                        location: prefetchedLocation || '',
+                        latitude: latitude || null,
+                        longitude: longitude || null,
+                        comment: ''
+                    }
+                };
+                window.MyTripsOffline.addPendingAction(action).then(() => {
+                    // Afficher la confirmation et démarrer le polling
+                    const alertDiv = document.createElement('div');
+                    alertDiv.className = 'alert alert-info alert-dismissible fade show position-fixed';
+                    alertDiv.style.cssText = 'top: 80px; right: 20px; z-index: 9999; min-width: 300px;';
+                    alertDiv.innerHTML = '<i class="bi bi-cloud-slash me-2"></i>Événement enregistré hors ligne'
+                        + '<button type="button" class="btn-close" data-bs-dismiss="alert"></button>';
+                    document.body.appendChild(alertDiv);
+                    setTimeout(() => alertDiv.remove(), 4000);
+
+                    window.MyTripsOffline.startPeriodicCheck && window.MyTripsOffline.startPeriodicCheck();
+                    window.MyTripsOffline.injectPendingPlannerEvents && window.MyTripsOffline.injectPendingPlannerEvents();
+                });
+            } else {
+                alert('Pas de connexion réseau. L\'événement n\'a pas pu être enregistré.');
+            }
         });
     }
 

@@ -7,6 +7,45 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.9.0] - 2026-05-19
+
+### Nouveautés
+
+#### Mode hors ligne — utilisation sans connexion internet
+
+- **Service Worker** (`sw.js`) pour la mise en cache des ressources statiques et des pages visitées
+- **Détection automatique** de la perte/retour de connexion via les événements navigateur `online`/`offline`
+- **Stockage local IndexedDB** des actions effectuées hors ligne (ajout de dépenses, événements planner)
+- **Restrictions de navigation hors ligne** :
+  - Seul l'onglet « Voyages » reste accessible
+  - Le planner et les dépenses ne sont accessibles que pour les **voyages en cours**
+  - Ajout de dépenses et d'événements planner (formulaire ou « Ici et maintenant ») uniquement pour les voyages en cours
+  - Le bouton « Ici et maintenant » sauvegarde l'événement en IndexedDB si la requête réseau échoue, et affiche un toast de confirmation hors ligne
+- **Synchronisation automatique** au retour en ligne via `POST /api/offline/sync`
+- **Politique de conflit** : en cas de doublon détecté, la valeur du serveur a priorité (l'entrée hors ligne est ignorée)
+- **Bandeau flottant de statut** en bas de l'écran :
+  - Gris : « Mode hors ligne » (affiché en permanence tant que la connexion est absente)
+  - Gris : « Mode hors ligne — En attente de synchronisation » + compteur (si actions en attente)
+  - Bleu : « Synchronisation en cours… » avec compteur
+  - Vert : « Synchronisation réussie » (disparaît après 3 secondes)
+  - Rouge : « Erreur de synchronisation »
+- **Nouveau endpoint REST** : `POST /api/offline/sync` (ADMIN, REPORTER) — réception batch des actions hors ligne
+- **Nouveau service** : `OfflineSyncService` — traitement et dédoublonnage des actions hors ligne
+- **Tests unitaires** : `OfflineSyncServiceTest` (6 tests) et `OfflineSyncControllerTest` (6 tests)
+- **PWA amélioré** : manifest.json enrichi avec référence au service worker
+
+#### Mode hors ligne — corrections et améliorations
+
+- **Bandeau persistant** : le bandeau reste affiché sur toutes les pages tant que le serveur est injoignable ; la détection s'appuie sur une variable `serverReachable` mise à jour à chaque sonde réseau, et non sur `navigator.onLine` qui peut être trompeur
+- **Sonde réseau fiable** : le Service Worker n'intercepte plus les requêtes `/actuator/` (ni `/api/`), empêchant que `/actuator/health` retourne une réponse en cache et masque à tort l'état hors ligne
+- **Voyages inaccessibles grisés** : dans la liste des voyages, les voyages non-en-cours sont grisés (opacité + désaturation), leur bouton « Détails » est désactivé et leurs boutons d'action (modifier, supprimer) sont masqués
+- **Événements planner en attente visibles** : les événements stockés hors ligne apparaissent dans un groupe dédié « En attente de synchronisation » en bas de la timeline, avec bordure orange et badge « hors ligne »
+- **Dépenses en attente visibles** : les dépenses stockées hors ligne apparaissent dans le tableau avec un badge orange « hors ligne »
+- **Pas d'erreur de synchronisation lors d'une tentative hors ligne** : si la synchronisation échoue avec une erreur réseau (`TypeError`), le bandeau reste en mode « en attente » sans afficher le rouge
+- **Message d'erreur détaillé** : en cas d'erreur serveur (HTTP 4xx/5xx), le bandeau rouge affiche le message extrait de la réponse JSON (`message` ou `error`) ou le code HTTP, pendant **10 secondes**
+
+---
+
 ## [2.8.0] - 2026-05-12
 
 ### Nouveautés

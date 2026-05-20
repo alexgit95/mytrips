@@ -19,7 +19,6 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.security.web.authentication.rememberme.PersistentTokenRepository;
 import org.springframework.security.web.header.writers.PermissionsPolicyHeaderWriter;
 import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
-
 import java.time.LocalDateTime;
 
 /**
@@ -82,7 +81,7 @@ public class SecurityConfig {
             .authorizeHttpRequests(auth -> auth
                 // Pages publiques
                 .requestMatchers("/login", "/css/**", "/js/**", "/images/**",
-                                 "/webjars/**", "/favicon.ico","/manifest.json").permitAll()
+                                 "/webjars/**", "/favicon.ico","/manifest.json", "/sw.js").permitAll()
                 // Health check endpoint accessible sans authentification (pour Portainer)
                 .requestMatchers("/actuator/health").permitAll()
                 // Export JSON via API key uniquement
@@ -110,6 +109,14 @@ public class SecurityConfig {
                 .rememberMeParameter("remember-me")
                 .rememberMeCookieName("remember-me")
                 .key(rememberMeKey)
+            )
+            .exceptionHandling(ex -> ex
+                // Les endpoints /api/** retournent 401 au lieu de rediriger vers /login
+                .defaultAuthenticationEntryPointFor(
+                    (request, response, authException) ->
+                        response.sendError(jakarta.servlet.http.HttpServletResponse.SC_UNAUTHORIZED),
+                    request -> request.getRequestURI().startsWith("/api/")
+                )
             )
             .addFilterBefore(apiExportRateLimitFilter, UsernamePasswordAuthenticationFilter.class)
             .addFilterBefore(apiKeyAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
