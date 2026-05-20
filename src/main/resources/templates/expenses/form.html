@@ -8,6 +8,9 @@
 <body>
 <th:block th:fragment="content">
 
+    <!-- Marker for offline.js -->
+    <div id="trip-context" th:data-trip-id="${trip.id}" th:data-trip-ongoing="${trip.ongoing}" style="display:none"></div>
+
     <!-- Breadcrumb -->
     <nav aria-label="breadcrumb" class="mb-4">
         <ol class="breadcrumb">
