@@ -117,6 +117,46 @@
             flex-shrink: 0;
             align-self: center;
         }
+
+        /* ── Sélecteur de mode de transport ── */
+        .rt-mode-btn {
+            white-space: nowrap;
+            border: 1.5px solid #dee2e6;
+            background: #fff;
+            color: #495057;
+            border-radius: 2rem;
+            padding: .25rem .8rem;
+            font-size: .82rem;
+            cursor: pointer;
+            transition: background .15s, color .15s, border-color .15s, box-shadow .15s;
+            flex-shrink: 0;
+        }
+
+        .rt-mode-btn:hover {
+            border-color: #495057;
+            color: #212529;
+        }
+
+        .rt-mode-btn.active[data-mode="driving"] {
+            background: #0d6efd;
+            border-color: #0d6efd;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(13,110,253,.35);
+        }
+
+        .rt-mode-btn.active[data-mode="walking"] {
+            background: #198754;
+            border-color: #198754;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(25,135,84,.35);
+        }
+
+        .rt-mode-btn.active[data-mode="transit"] {
+            background: #6f42c1;
+            border-color: #6f42c1;
+            color: #fff;
+            box-shadow: 0 2px 8px rgba(111,66,193,.35);
+        }
     </style>
 </th:block>
 
@@ -129,7 +169,8 @@
                   data-accommodations=${accommodationsJson},
                   data-trip-name=${trip.name},
                   data-is-abroad=${isAbroad},
-                  data-home-country=${homeCountry}"
+                  data-home-country=${homeCountry},
+                  data-trip-id=${trip.id}"
          style="display:none"></div>
 
     <!-- Breadcrumb -->
@@ -182,6 +223,23 @@
                 <div id="date-timeline" class="d-flex align-items-center gap-1 flex-grow-1">
                     <!-- Généré par JS -->
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Sélecteur de mode de transport -->
+    <div class="card shadow-sm mb-3" id="transport-mode-card">
+        <div class="card-body py-2 px-3">
+            <div class="d-flex align-items-center gap-2 flex-wrap">
+                <span class="text-muted small fw-semibold text-nowrap">
+                    <i class="bi bi-signpost-split me-1"></i>Mode de transport :
+                </span>
+                <div id="transport-mode-btns" class="d-flex align-items-center gap-2">
+                    <button class="rt-mode-btn" data-mode="driving">🚗 Voiture</button>
+                    <button class="rt-mode-btn" data-mode="walking">🚶 Piéton</button>
+                    <button class="rt-mode-btn" data-mode="transit">🚌 Piéton / TC</button>
+                </div>
+                <span id="transport-mode-hint" class="text-muted small fst-italic ms-2"></span>
             </div>
         </div>
     </div>
@@ -256,6 +314,12 @@
     const rtDataEl  = document.getElementById('rt-data');
     const allWps    = JSON.parse(rtDataEl.dataset.waypoints || '[]');
     const allAccommodations = JSON.parse(rtDataEl.dataset.accommodations || '[]');
+
+    /* ─── Modes de transport par jour ──────────────────────────────────────────────── */
+    const tripId   = rtDataEl.dataset.tripId || 'trip';
+    const MODES_KEY = 'rt_day_modes_' + tripId;
+    let dayModes = {};
+    try { dayModes = JSON.parse(localStorage.getItem(MODES_KEY) || '{}'); } catch(e) { dayModes = {}; }
 
     /* ─── Stats durée (globales, ne change pas au filtrage) ─────────────────── */
     if (allWps.length >= 2) {
@@ -404,7 +468,14 @@
 
         /* ── Itinéraire ─────────────────────────────────────────────────── */
         if (routeWps.length >= 2) {
-            fetchOsrmRoute(routeWps, !!activeAcc);
+            const mode = getMode(selectedDate);
+            if (mode === 'walking') {
+                drawWalkingRoute(routeWps, !!activeAcc);
+            } else if (mode === 'transit') {
+                drawTransitRoute(routeWps, !!activeAcc);
+            } else {
+                fetchOsrmRoute(routeWps, !!activeAcc);
+            }
         } else {
             map.setView([wps[0].lat, wps[0].lng], 12);
             document.getElementById('total-distance').textContent = '—';
@@ -417,6 +488,7 @@
     buildDateTimeline(uniqueDates);
 
     /* Affichage initial : toutes les étapes */
+    updateModeButtons('all');
     renderView(allWps);
 
     function buildDateTimeline(dates) {
@@ -442,6 +514,7 @@
             btn.dataset.date = d;
             btn.innerHTML   = `<span class="fw-semibold">${formatDate(d)}</span>`;
             container.appendChild(btn);
+            updateDayButtonModeIcon(d, btn);
         });
 
         /* Click handler (délégation) */
@@ -453,6 +526,7 @@
             btn.classList.add('active');
 
             const selectedDate = btn.dataset.date;
+            updateModeButtons(selectedDate);
             const filtered = selectedDate === 'all'
                 ? allWps
                 : allWps.filter(w => w.date === selectedDate);
@@ -541,7 +615,8 @@
         showAlert('Le calcul d\'itinéraire routier est temporairement indisponible. La distance affichée est estimée à vol d\'oiseau.');
     }
 
-    function addDirectionArrows(latLngs) {
+    function addDirectionArrows(latLngs, color) {
+        const arrowColor = color || '#fd7e14';
         if (latLngs.length < 2) return;
         const step = Math.max(1, Math.floor(latLngs.length / 20));
         for (let i = step; i < latLngs.length; i += step) {
@@ -552,7 +627,7 @@
             addLayer(L.marker(mid, {
                 icon: L.divIcon({
                     className: '',
-                    html: `<div style="transform:rotate(${angle.toFixed(0)}deg);color:#fd7e14;font-size:12px;opacity:.75;">▲</div>`,
+                    html: `<div style="transform:rotate(${angle.toFixed(0)}deg);color:${arrowColor};font-size:12px;opacity:.75;">▲</div>`,
                     iconSize: [14, 14],
                     iconAnchor: [7, 7]
                 }),
@@ -690,6 +765,115 @@
 
     function hideAlert() {
         document.getElementById('rt-alert').classList.add('d-none');
+    }
+
+    /* ══════════════════════════════════════════════════════════════════════════ */
+    /*  MODES DE TRANSPORT PAR JOUR                                               */
+    /* ══════════════════════════════════════════════════════════════════════════ */
+
+    function getMode(dateKey) {
+        return dayModes[dateKey] || 'driving';
+    }
+
+    function saveMode(dateKey, mode) {
+        dayModes[dateKey] = mode;
+        try { localStorage.setItem(MODES_KEY, JSON.stringify(dayModes)); } catch(e) {}
+    }
+
+    function updateModeButtons(dateKey) {
+        const mode = getMode(dateKey);
+        document.querySelectorAll('.rt-mode-btn').forEach(function(btn) {
+            btn.classList.toggle('active', btn.dataset.mode === mode);
+        });
+        const hint = document.getElementById('transport-mode-hint');
+        if (dateKey === 'all') {
+            hint.textContent = 'Sélectionnez un jour pour définir le mode par journée';
+        } else {
+            const modeLabels = {driving: '🚗 Voiture', walking: '🚶 Piéton', transit: '🚌 Piéton / TC'};
+            hint.textContent = 'Mode actif : ' + (modeLabels[mode] || mode);
+        }
+    }
+
+    function updateDayButtonModeIcon(date, btnEl) {
+        const btn = btnEl || document.querySelector(`#date-timeline .rt-date-btn[data-date="${date}"]`);
+        if (!btn) return;
+        const existingIcon = btn.querySelector('.rt-mode-icon');
+        if (existingIcon) existingIcon.remove();
+        const mode = dayModes[date]; // only show if explicitly saved for this day
+        if (mode) {
+            const modeEmojis = {driving: '🚗', walking: '🚶', transit: '🚌'};
+            const iconSpan = document.createElement('span');
+            iconSpan.className = 'rt-mode-icon ms-1';
+            iconSpan.style.fontSize = '.72rem';
+            iconSpan.textContent = modeEmojis[mode] || '';
+            btn.appendChild(iconSpan);
+        }
+    }
+
+    /* Gestionnaire de clic sur les boutons de mode */
+    document.getElementById('transport-mode-btns').addEventListener('click', function(e) {
+        const btn = e.target.closest('.rt-mode-btn');
+        if (!btn) return;
+
+        const activeDateBtn = document.querySelector('#date-timeline .rt-date-btn.active');
+        const selectedDate  = activeDateBtn ? activeDateBtn.dataset.date : 'all';
+        const newMode       = btn.dataset.mode;
+
+        saveMode(selectedDate, newMode);
+        updateModeButtons(selectedDate);
+        updateDayButtonModeIcon(selectedDate);
+
+        /* Recalculer l'itinéraire avec le nouveau mode */
+        const filtered = selectedDate === 'all'
+            ? allWps
+            : allWps.filter(w => w.date === selectedDate);
+        renderView(filtered);
+    });
+
+    /* ══════════════════════════════════════════════════════════════════════════ */
+    /*  ROUTES À PIED ET TRANSPORTS EN COMMUN (estimation haversine)              */
+    /* ══════════════════════════════════════════════════════════════════════════ */
+
+    function drawWalkingRoute(wps, withAcc) {
+        const latLngs = wps.map(w => [w.lat, w.lng]);
+        let totalKm   = 0;
+        for (let i = 0; i < latLngs.length - 1; i++) {
+            addLayer(L.polyline([latLngs[i], latLngs[i+1]], {
+                color:     '#198754',
+                weight:    4,
+                opacity:   0.85,
+                dashArray: '8 5'
+            }));
+            totalKm += haversineKm(latLngs[i][0], latLngs[i][1], latLngs[i+1][0], latLngs[i+1][1]);
+        }
+        addDirectionArrows(latLngs, '#198754');
+        map.fitBounds(L.latLngBounds(latLngs), {padding: [40, 40]});
+        const estimatedKm = Math.round(totalKm * 1.25);
+        document.getElementById('total-distance').textContent = estimatedKm + ' km';
+        document.getElementById('distance-note').textContent  = withAcc
+            ? '🚶 Aller-retour depuis le logement · distance à pied estimée'
+            : '🚶 Distance à pied estimée (vol d\'oiseau × 1,25)';
+    }
+
+    function drawTransitRoute(wps, withAcc) {
+        const latLngs = wps.map(w => [w.lat, w.lng]);
+        let totalKm   = 0;
+        for (let i = 0; i < latLngs.length - 1; i++) {
+            addLayer(L.polyline([latLngs[i], latLngs[i+1]], {
+                color:     '#6f42c1',
+                weight:    4,
+                opacity:   0.85,
+                dashArray: '2 7'
+            }));
+            totalKm += haversineKm(latLngs[i][0], latLngs[i][1], latLngs[i+1][0], latLngs[i+1][1]);
+        }
+        addDirectionArrows(latLngs, '#6f42c1');
+        map.fitBounds(L.latLngBounds(latLngs), {padding: [40, 40]});
+        const estimatedKm = Math.round(totalKm * 1.15);
+        document.getElementById('total-distance').textContent = estimatedKm + ' km';
+        document.getElementById('distance-note').textContent  = withAcc
+            ? '🚌 Aller-retour depuis le logement · distance TC estimée'
+            : '🚌 Distance TC estimée (vol d\'oiseau × 1,15)';
     }
 
 })();

@@ -7,6 +7,25 @@ et le versionnage suit [Semantic Versioning](https://semver.org/lang/fr/).
 
 ---
 
+## [2.10.0] - 2026-05-21
+
+### Nouveautés
+
+#### Road Trip — sélection du mode de transport par journée
+
+- Ajout d'un **sélecteur de mode de transport** dans l'onglet Road Trip, affiché entre la timeline des dates et la carte
+- Trois modes disponibles :
+  - 🚗 **Voiture** — calcul d'itinéraire routier réel via OSRM (comportement existant), tracé dégradé orange → bleu
+  - 🚶 **Piéton** — tracé en tirets verts, distance estimée à partir du vol d'oiseau × 1,25
+  - 🚌 **Piéton / Transports en commun** — tracé en pointillés violets, distance estimée à partir du vol d'oiseau × 1,15
+- Le mode est **mémorisé par journée** dans le `localStorage` (clé indexée par `tripId` + date) : les choix sont conservés d'une visite à l'autre
+- Un **emoji indicateur** apparaît sur chaque bouton de la timeline de dates dès qu'un mode a été explicitement défini pour ce jour (ex. `lun. 2 juin 🚶`)
+- Le sélecteur se synchronise automatiquement lors du changement de journée pour refléter le mode déjà sauvegardé
+- Changer de mode relance immédiatement le calcul et le rendu de l'itinéraire
+- La note de distance (sous le chiffre) indique le mode actif et la méthode de calcul utilisée
+
+---
+
 ## [2.9.0] - 2026-05-19
 
 ### Nouveautés
