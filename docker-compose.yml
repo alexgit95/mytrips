@@ -17,7 +17,7 @@ services:
 
   # ── Base de données PostgreSQL ───────────────────────────────────
   db:
-    image: postgres:18-alpine
+    image: postgres:19-alpine
     container_name: mytrips-db
     environment:
       POSTGRES_DB: mytrips
